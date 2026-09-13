@@ -439,8 +439,18 @@ const nonsenseWrongBtn = document.getElementById("nonsense-wrong-btn");
 
 let pendingNonsense = null;
 const eventFeedbackEl = document.getElementById("event-feedback");
-const eventFeedbackTextEl = document.getElementById("event-feedback-text");
+const feedbackTitleEl = document.getElementById("feedback-title");
+const feedbackStatEl = document.getElementById("feedback-stat");
+const feedbackDetailEl = document.getElementById("feedback-detail");
 const eventCloseBtn = document.getElementById("event-close");
+
+function showFeedback(title, stat, detail, correct) {
+  feedbackTitleEl.textContent = title;
+  feedbackStatEl.textContent = stat;
+  feedbackStatEl.className = "feedback-stat " + (correct ? "feedback-correct" : "feedback-wrong");
+  feedbackDetailEl.textContent = detail;
+  eventFeedbackEl.classList.remove("hidden");
+}
 
 const diceOverlayEl = document.getElementById("dice-overlay");
 const diceCubeEl = document.getElementById("dice-cube");
@@ -589,7 +599,10 @@ function showEvent(tile, unit) {
     eventNewsEl.textContent = "";
     eventQuestionEl.textContent = `${unit.icon} ${unit.name}이(가) 출발점을 지나 다시 게임을 이어갑니다.`;
     eventAnswerRowEl.classList.add("hidden");
-    eventFeedbackTextEl.textContent = "";
+    feedbackTitleEl.textContent = "";
+    feedbackStatEl.textContent = "";
+    feedbackStatEl.className = "feedback-stat";
+    feedbackDetailEl.textContent = "";
     eventFeedbackEl.classList.remove("hidden");
   } else if (tile.isSpecial && tile.specialType === "island") {
     const direction = Math.random() < 0.5 ? "up" : "down";
@@ -662,17 +675,18 @@ answerBtns.forEach((btn) => {
     if (pendingQuiz.isIsland) {
       pendingQuiz.unit.score += correct ? 2 : -1;
       if (!correct) pendingQuiz.unit.skipNextTurn = true;
-      eventFeedbackTextEl.textContent = correct
-        ? `🎉 탈출 성공! (자산 +2) ${explanation}`
-        : `🔒 탈출 실패... 다음 턴은 쉬어야 해요. (자산 -1) ${explanation}`;
+      showFeedback(
+        correct ? "탈출 성공!" : "탈출 실패...",
+        correct ? "자산 +2" : "자산 -1",
+        correct ? explanation : `${explanation} (다음 턴은 쉬어야 해요)`,
+        correct
+      );
     } else {
       pendingQuiz.unit.score += correct ? 1 : -1;
-      eventFeedbackTextEl.textContent = (correct ? "✅ 정답이에요! (자산 +1) " : "❌ 아쉬워요! (자산 -1) ") + explanation;
+      showFeedback(correct ? "정답이에요!" : "아쉬워요!", correct ? "자산 +1" : "자산 -1", explanation, correct);
     }
 
-    eventFeedbackTextEl.className = correct ? "feedback-correct" : "feedback-wrong";
     eventAnswerRowEl.classList.add("hidden");
-    eventFeedbackEl.classList.remove("hidden");
     renderUnitBar();
   });
 });
@@ -707,11 +721,12 @@ function resolveNonsense(correct) {
   renderBoard();
 
   nonsenseRevealEl.classList.add("hidden");
-  eventFeedbackTextEl.textContent = correct
-    ? "✅ 정답이에요! 1칸 전진합니다. (도착한 칸의 효과는 적용되지 않아요)"
-    : "❌ 아쉬워요! 1칸 후진합니다.";
-  eventFeedbackTextEl.className = correct ? "feedback-correct" : "feedback-wrong";
-  eventFeedbackEl.classList.remove("hidden");
+  showFeedback(
+    correct ? "정답이에요!" : "아쉬워요!",
+    correct ? "1칸 전진" : "1칸 후진",
+    "(도착한 칸의 효과는 적용되지 않아요)",
+    correct
+  );
 }
 
 nonsenseCorrectBtn.addEventListener("click", () => resolveNonsense(true));

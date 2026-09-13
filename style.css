@@ -821,9 +821,11 @@ body {
 }
 
 .card-back-face {
-  background: var(--accent-gradient);
-  color: #fff;
-  font-size: 40px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  font-size: 82px;
+  padding: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .card-front-face {
@@ -930,9 +932,26 @@ body {
   transform: translateY(-2px);
 }
 
-#event-feedback p {
+.feedback-title {
+  font-size: 13px;
   font-weight: 700;
-  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+.feedback-stat {
+  font-size: 38px;
+  font-weight: 800;
+  margin: 0 0 10px;
+  line-height: 1.1;
+}
+
+.feedback-detail {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+  line-height: 1.5;
 }
 
 .feedback-correct {
