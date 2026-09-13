@@ -244,6 +244,64 @@ const state = {
 
 let pendingQuiz = null;
 
+// ---------------- Teacher review mode ----------------
+// Not real gameplay: every tile becomes clickable so a teacher can check
+// each question's content and correct answer. Answering never touches
+// score, position, or the turn order.
+
+let isReviewMode = false;
+const REVIEW_UNIT = { name: "검토용", icon: "🧑‍🏫", pos: 0, score: 0, distance: 0, laps: 0, skipNextTurn: false };
+
+const teacherReviewFab = document.getElementById("teacher-review-fab");
+const teacherReviewModal = document.getElementById("teacher-review-modal");
+const teacherReviewPasswordInput = document.getElementById("teacher-review-password-input");
+const teacherReviewPasswordError = document.getElementById("teacher-review-password-error");
+const teacherReviewPasswordSubmit = document.getElementById("teacher-review-password-submit");
+
+teacherReviewFab.addEventListener("click", () => {
+  teacherReviewPasswordInput.value = "";
+  teacherReviewPasswordError.classList.add("hidden");
+  teacherReviewModal.classList.remove("hidden");
+  teacherReviewPasswordInput.focus();
+});
+
+function checkTeacherReviewPassword() {
+  if (teacherReviewPasswordInput.value === TEACHER_PASSWORD) {
+    teacherReviewModal.classList.add("hidden");
+    enterReviewMode();
+  } else {
+    teacherReviewPasswordError.classList.remove("hidden");
+    teacherReviewPasswordInput.value = "";
+    teacherReviewPasswordInput.focus();
+  }
+}
+
+teacherReviewPasswordSubmit.addEventListener("click", checkTeacherReviewPassword);
+teacherReviewPasswordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkTeacherReviewPassword();
+});
+
+function enterReviewMode() {
+  isReviewMode = true;
+  state.units = [];
+  showScreen("game-screen");
+  document.getElementById("normal-panel").classList.add("hidden");
+  document.getElementById("review-panel").classList.remove("hidden");
+  rollBtn.classList.add("hidden");
+  renderUnitBar();
+  renderBoard();
+}
+
+function exitReviewMode() {
+  isReviewMode = false;
+  document.getElementById("normal-panel").classList.remove("hidden");
+  document.getElementById("review-panel").classList.add("hidden");
+  rollBtn.classList.remove("hidden");
+  showScreen("setup-screen");
+}
+
+document.getElementById("exit-review-btn").addEventListener("click", exitReviewMode);
+
 function currentUnit() {
   return state.units[state.currentUnitIndex];
 }
@@ -442,7 +500,16 @@ function renderBoard() {
     el.style.gridRow = tile.row;
     el.style.gridColumn = tile.col;
 
-    if (tile.specialType === "card") {
+    if (isReviewMode) {
+      el.classList.add("clickable-tile");
+      el.addEventListener("click", () => {
+        if (tile.specialType === "card") {
+          startCardPreviewGrid();
+        } else {
+          showEvent(tile, REVIEW_UNIT);
+        }
+      });
+    } else if (tile.specialType === "card") {
       el.classList.add("clickable-tile");
       el.addEventListener("click", () => openCardPreview());
     }
@@ -501,6 +568,7 @@ function showEvent(tile, unit) {
   eventNewsEl.classList.add("hidden");
   quizCardsRowEl.classList.add("hidden");
   quizTeamCardEl.classList.add("hidden");
+  eventCloseBtn.textContent = isReviewMode ? "확인" : "다음";
 
   if (tile.isStart) {
     pendingQuiz = null;
@@ -636,11 +704,13 @@ answerBtns.forEach((btn) => {
       : QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
     const category = pendingQuiz.category;
 
-    state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
+    if (!isReviewMode) state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
 
     if (pendingQuiz.isIsland) {
-      pendingQuiz.unit.score += correct ? 2 : -1;
-      if (!correct) pendingQuiz.unit.skipNextTurn = true;
+      if (!isReviewMode) {
+        pendingQuiz.unit.score += correct ? 2 : -1;
+        if (!correct) pendingQuiz.unit.skipNextTurn = true;
+      }
       showFeedback(
         correct ? "정답!" : "땡!",
         correct ? "자산 +2" : "자산 -1",
@@ -648,12 +718,12 @@ answerBtns.forEach((btn) => {
         correct
       );
     } else {
-      pendingQuiz.unit.score += correct ? 1 : -1;
+      if (!isReviewMode) pendingQuiz.unit.score += correct ? 1 : -1;
       showFeedback(correct ? "정답!" : "땡!", correct ? "자산 +1" : "자산 -1", explanation, correct);
     }
 
     eventAnswerRowEl.classList.add("hidden");
-    renderUnitBar();
+    if (!isReviewMode) renderUnitBar();
   });
 });
 
@@ -672,14 +742,17 @@ function advanceTurnOrEndGame() {
 
 eventCloseBtn.addEventListener("click", () => {
   eventModalEl.classList.add("hidden");
+  if (isReviewMode) return;
   advanceTurnOrEndGame();
 });
 
 function resolveNonsense(correct) {
   const unit = pendingNonsense.unit;
-  moveUnitBy(unit, correct ? 1 : -1);
-  renderBoard();
-  lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
+  if (!isReviewMode) {
+    moveUnitBy(unit, correct ? 1 : -1);
+    renderBoard();
+    lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
+  }
 
   nonsenseOptionsEl.classList.add("hidden");
   showFeedback(
@@ -876,14 +949,22 @@ function openCardPreview() {
   cardModalEl.classList.remove("hidden");
 }
 
+function startCardPreviewGrid() {
+  cardIsPreview = true;
+  cardDrawUnit = null;
+  cardRollAgain = false;
+  cardPasswordGateEl.classList.add("hidden");
+  cardModalContentEl.classList.add("expanded");
+  const originEl = document.querySelector(".tile.special-card");
+  cardOriginRect = originEl ? originEl.getBoundingClientRect() : null;
+  cardModalEl.classList.remove("hidden");
+  renderCardGrid();
+}
+
 function checkCardPassword() {
   if (cardPasswordInput.value === TEACHER_PASSWORD) {
     cardPasswordInput.value = "";
-    cardPasswordGateEl.classList.add("hidden");
-    cardModalContentEl.classList.add("expanded");
-    const originEl = document.querySelector(".tile.special-card");
-    cardOriginRect = originEl ? originEl.getBoundingClientRect() : null;
-    renderCardGrid();
+    startCardPreviewGrid();
   } else {
     cardPasswordErrorEl.classList.remove("hidden");
     cardPasswordInput.value = "";

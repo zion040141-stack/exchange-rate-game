@@ -32,6 +32,19 @@
 
       <button id="dev-preview-btn" class="dev-link-btn">🛠 개발자: 리포트 화면 미리보기</button>
     </div>
+
+    <button id="teacher-review-fab" class="teacher-review-fab">🧑‍🏫 교사</button>
+  </div>
+
+  <!-- 교사 검토 모드 비밀번호 -->
+  <div id="teacher-review-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>🧑‍🏫 교사 검토 모드</h2>
+      <p>비밀번호를 입력하면 문제 내용을 검토할 수 있어요.</p>
+      <input id="teacher-review-password-input" class="password-input" type="password" inputmode="numeric" placeholder="••••" maxlength="8" />
+      <p id="teacher-review-password-error" class="password-error hidden">비밀번호가 올바르지 않습니다.</p>
+      <button id="teacher-review-password-submit" class="start-btn">입장</button>
+    </div>
   </div>
 
   <!-- 게임 화면 -->
@@ -49,31 +62,39 @@
       </section>
 
       <aside class="panel">
-        <div class="panel-block">
-          <span class="panel-label">현재 차례</span>
-          <span id="current-player" class="panel-value">-</span>
+        <div id="normal-panel">
+          <div class="panel-block">
+            <span class="panel-label">현재 차례</span>
+            <span id="current-player" class="panel-value">-</span>
+          </div>
+
+          <div class="panel-block">
+            <span class="panel-label">현재 바퀴</span>
+            <span id="lap-count" class="panel-value">0 / 3</span>
+            <p class="lap-warning">3바퀴 돌면 게임 종료!</p>
+          </div>
+
+          <div class="panel-block">
+            <span class="panel-label">현재 자산 순위</span>
+            <div id="asset-ranking" class="asset-ranking"></div>
+          </div>
+
+          <div class="panel-block log-block">
+            <button id="log-toggle-btn" class="log-toggle-btn">
+              <span class="panel-label">진행 기록</span>
+              <span id="log-toggle-icon" class="log-toggle-icon">▾</span>
+            </button>
+            <ul id="log-list" class="log-list"></ul>
+          </div>
+
+          <button id="end-game-btn" class="end-game-btn">게임 종료 · 결과 보기</button>
         </div>
 
-        <div class="panel-block">
-          <span class="panel-label">현재 바퀴</span>
-          <span id="lap-count" class="panel-value">0 / 3</span>
-          <p class="lap-warning">3바퀴 돌면 게임 종료!</p>
+        <div id="review-panel" class="panel-block hidden">
+          <span class="panel-label">🧑‍🏫 교사 검토 모드</span>
+          <p class="review-panel-text">칸을 클릭하면 그 칸의 문제 내용을 확인할 수 있어요. 정답을 골라도 점수·이동에는 반영되지 않아요.</p>
+          <button id="exit-review-btn" class="end-game-btn">검토 종료</button>
         </div>
-
-        <div class="panel-block">
-          <span class="panel-label">현재 자산 순위</span>
-          <div id="asset-ranking" class="asset-ranking"></div>
-        </div>
-
-        <div class="panel-block log-block">
-          <button id="log-toggle-btn" class="log-toggle-btn">
-            <span class="panel-label">진행 기록</span>
-            <span id="log-toggle-icon" class="log-toggle-icon">▾</span>
-          </button>
-          <ul id="log-list" class="log-list"></ul>
-        </div>
-
-        <button id="end-game-btn" class="end-game-btn">게임 종료 · 결과 보기</button>
       </aside>
     </main>
 
