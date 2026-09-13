@@ -66,6 +66,27 @@ const NEWS_HEADLINES = {
   ],
 };
 
+const CARDS = [
+  { id: "trade", icon: "🔄", title: "맞트레이드" },
+  { id: "forward2", icon: "🚀", title: "순풍이 붑니다" },
+  { id: "back2", icon: "🌪️", title: "역풍을 맞았어요" },
+  { id: "doubleQuiz", icon: "⚡", title: "더블 찬스" },
+  { id: "skipTurn", icon: "😴", title: "방심했어요" },
+  { id: "trivia", icon: "💡", title: "오늘의 경제 상식" },
+  { id: "catchup", icon: "🎁", title: "환율 안정 지원금" },
+  { id: "fee", icon: "💸", title: "환전 수수료" },
+  { id: "rollAgain", icon: "🔁", title: "한 번 더 굴리기" },
+  { id: "interest", icon: "🏦", title: "저축 이자 수령" },
+];
+
+const TRIVIA_FACTS = [
+  "환율이 오르면 해외여행 경비 부담이 커져요.",
+  "우리나라 환율은 보통 원/달러로 표시돼요.",
+  "환율이 내리면 수입 물가가 내려가 생활비 부담이 줄 수 있어요.",
+  "1997년 외환위기 때 원/달러 환율이 크게 치솟았어요.",
+  "중앙은행은 환율이 너무 흔들리면 외환보유액으로 시장에 개입하기도 해요.",
+];
+
 function buildPerimeterCells() {
   const cells = [];
   for (let col = 1; col <= GRID; col++) cells.push({ row: 1, col });
@@ -508,14 +529,9 @@ function showEvent(tile, unit) {
     answerNeutralBtn.classList.remove("hidden");
     eventAnswerRowEl.classList.remove("hidden");
     eventFeedbackEl.classList.add("hidden");
-  } else if (tile.isSpecial) {
-    pendingQuiz = null;
-    eventTitleEl.textContent = `${tile.icon} ${tile.category}`;
-    eventNewsEl.textContent = "";
-    eventQuestionEl.textContent = `${unit.icon} ${unit.name}이(가) ${tile.category} 칸에 도착했습니다! (세부 규칙은 추후 추가될 예정이에요)`;
-    eventAnswerRowEl.classList.add("hidden");
-    eventFeedbackTextEl.textContent = "";
-    eventFeedbackEl.classList.remove("hidden");
+  } else if (tile.isSpecial && tile.specialType === "card") {
+    openCardModal(unit);
+    return;
   } else {
     const direction = Math.random() < 0.5 ? "up" : "down";
     const headlines = NEWS_HEADLINES[direction];
@@ -645,21 +661,17 @@ function showManualDiceModal() {
 
 // ---------------- Roll button ----------------
 
-rollBtn.addEventListener("click", async () => {
-  if (state.animating) return;
+function skipStuckTurn(unit) {
+  unit.skipNextTurn = false;
+  state.turn += 1;
+  turnCountEl.textContent = state.turn;
+  addLog(`${state.turn}턴: ${unit.icon} ${unit.name} - 무인도에 갇혀 이번 턴을 쉽니다`);
+  state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
+  updateCurrentUnitDisplay();
+  triggerRollInvite();
+}
 
-  const skippedUnit = currentUnit();
-  if (skippedUnit.skipNextTurn) {
-    skippedUnit.skipNextTurn = false;
-    state.turn += 1;
-    turnCountEl.textContent = state.turn;
-    addLog(`${state.turn}턴: ${skippedUnit.icon} ${skippedUnit.name} - 무인도에 갇혀 이번 턴을 쉽니다`);
-    state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
-    updateCurrentUnitDisplay();
-    triggerRollInvite();
-    return;
-  }
-
+async function performRoll() {
   state.animating = true;
   rollBtn.disabled = true;
 
@@ -679,6 +691,191 @@ rollBtn.addEventListener("click", async () => {
   state.turn += 1;
   turnCountEl.textContent = state.turn;
   movePlayerStep(result);
+}
+
+rollBtn.addEventListener("click", () => {
+  if (state.animating) return;
+  const unit = currentUnit();
+  if (unit.skipNextTurn) {
+    skipStuckTurn(unit);
+    return;
+  }
+  performRoll();
+});
+
+// ---------------- Card draw (카드뽑기) ----------------
+
+const cardModalEl = document.getElementById("card-modal");
+const cardGridEl = document.getElementById("card-grid");
+const cardTradePickerEl = document.getElementById("card-trade-picker");
+const cardTradeOptionsEl = document.getElementById("card-trade-options");
+const cardResultEl = document.getElementById("card-result");
+const cardResultTextEl = document.getElementById("card-result-text");
+const cardCloseBtn = document.getElementById("card-close-btn");
+
+let cardDrawUnit = null;
+let cardRollAgain = false;
+
+function openCardModal(unit) {
+  cardDrawUnit = unit;
+  cardRollAgain = false;
+
+  cardGridEl.innerHTML = "";
+  cardGridEl.classList.remove("hidden");
+  cardTradePickerEl.classList.add("hidden");
+  cardResultEl.classList.add("hidden");
+
+  const shuffled = [...CARDS].sort(() => Math.random() - 0.5);
+  shuffled.forEach((card) => {
+    const btn = document.createElement("button");
+    btn.className = "card-item";
+    btn.innerHTML = '<div class="card-face card-back-face">🃏</div>';
+    btn.addEventListener("click", () => pickCard(btn, card));
+    cardGridEl.appendChild(btn);
+  });
+
+  cardModalEl.classList.remove("hidden");
+}
+
+function pickCard(btn, card) {
+  cardGridEl.querySelectorAll(".card-item").forEach((b) => {
+    b.disabled = true;
+  });
+  btn.classList.add("flipping");
+  setTimeout(() => {
+    btn.innerHTML = `<div class="card-face card-front-face"><span class="card-icon">${card.icon}</span><span>${card.title}</span></div>`;
+    btn.classList.remove("flipping");
+    setTimeout(() => applyCard(card), 300);
+  }, 250);
+}
+
+function showCardResult(text, { rollAgain = false } = {}) {
+  cardRollAgain = rollAgain;
+  cardGridEl.classList.add("hidden");
+  cardTradePickerEl.classList.add("hidden");
+  cardResultTextEl.textContent = text;
+  cardResultEl.classList.remove("hidden");
+}
+
+function applyCard(card) {
+  const unit = cardDrawUnit;
+
+  switch (card.id) {
+    case "trade": {
+      const others = state.units.filter((u) => u !== unit);
+      if (others.length === 0) {
+        const delta = Math.random() < 0.5 ? 2 : -2;
+        unit.score += delta;
+        renderUnitBar();
+        showCardResult(`${card.icon} ${card.title}\n바꿀 상대가 없어서 대신 자산이 ${delta > 0 ? "+2" : "-2"} 됐어요!`);
+      } else {
+        cardGridEl.classList.add("hidden");
+        cardTradePickerEl.classList.remove("hidden");
+        cardTradeOptionsEl.innerHTML = "";
+        others.forEach((opponent) => {
+          const optBtn = document.createElement("button");
+          optBtn.className = "option-btn";
+          optBtn.textContent = `${opponent.icon} ${opponent.name} (자산 ${opponent.score})`;
+          optBtn.addEventListener("click", () => {
+            const temp = unit.score;
+            unit.score = opponent.score;
+            opponent.score = temp;
+            renderUnitBar();
+            showCardResult(`${card.icon} ${card.title}\n${opponent.icon} ${opponent.name}과(와) 자산을 맞바꿨어요!`);
+          });
+          cardTradeOptionsEl.appendChild(optBtn);
+        });
+      }
+      break;
+    }
+    case "forward2":
+      unit.pos = (unit.pos + 2) % tileCount;
+      unit.distance += 2;
+      renderBoard();
+      showCardResult(`${card.icon} ${card.title}\n2칸 앞으로 이동했어요! (도착한 칸의 효과는 적용되지 않아요)`);
+      break;
+    case "back2":
+      unit.pos = (unit.pos - 2 + tileCount) % tileCount;
+      unit.distance = Math.max(0, unit.distance - 2);
+      renderBoard();
+      showCardResult(`${card.icon} ${card.title}\n2칸 뒤로 이동했어요.`);
+      break;
+    case "skipTurn":
+      unit.skipNextTurn = true;
+      showCardResult(`${card.icon} ${card.title}\n다음 턴은 쉬어야 해요.`);
+      break;
+    case "trivia": {
+      const fact = TRIVIA_FACTS[Math.floor(Math.random() * TRIVIA_FACTS.length)];
+      showCardResult(`${card.icon} ${card.title}\n축하합니다! 이 카드는 게임에는 1도 도움이 안 돼요. 대신 쓸데없이 유식해집니다 😏\n"${fact}"`);
+      break;
+    }
+    case "catchup": {
+      const minScore = Math.min(...state.units.map((u) => u.score));
+      const targets = state.units.filter((u) => u.score === minScore);
+      targets.forEach((u) => {
+        u.score += 3;
+      });
+      renderUnitBar();
+      showCardResult(`${card.icon} ${card.title}\n자산이 가장 낮은 ${targets.map((u) => u.name).join(", ")}에게 +3을 지급했어요!`);
+      break;
+    }
+    case "fee":
+      unit.score -= 1;
+      renderUnitBar();
+      showCardResult(`${card.icon} ${card.title}\n자산이 1 줄었어요.`);
+      break;
+    case "interest":
+      unit.score += 1;
+      renderUnitBar();
+      showCardResult(`${card.icon} ${card.title}\n자산이 1 늘었어요.`);
+      break;
+    case "doubleQuiz":
+      cardModalEl.classList.add("hidden");
+      triggerBonusQuiz(unit);
+      break;
+    case "rollAgain":
+      showCardResult(`${card.icon} ${card.title}\n주사위를 한 번 더 굴려요!`, { rollAgain: true });
+      break;
+  }
+}
+
+function triggerBonusQuiz(unit) {
+  const direction = Math.random() < 0.5 ? "up" : "down";
+  const headlines = NEWS_HEADLINES[direction];
+  const news = headlines[Math.floor(Math.random() * headlines.length)];
+  const categoryIndex = Math.floor(Math.random() * CATEGORIES.length);
+  const correctImpact = correctImpactFor(categoryIndex, direction);
+
+  pendingQuiz = { unit, direction, correctImpact, categoryIndex, isIsland: false };
+
+  eventTitleEl.textContent = "⚡ 더블 찬스 퀴즈";
+  eventNewsEl.textContent = news;
+  eventQuestionEl.textContent = `이 상황에서 "${CATEGORY_ICONS[categoryIndex]} ${CATEGORIES[categoryIndex]}"는 유리할까요, 불리할까요?`;
+  answerNeutralBtn.classList.add("hidden");
+  eventAnswerRowEl.classList.remove("hidden");
+  eventFeedbackEl.classList.add("hidden");
+  eventModalEl.classList.remove("hidden");
+}
+
+cardCloseBtn.addEventListener("click", () => {
+  cardModalEl.classList.add("hidden");
+
+  if (cardRollAgain) {
+    cardRollAgain = false;
+    const unit = currentUnit();
+    if (unit.skipNextTurn) {
+      skipStuckTurn(unit);
+    } else {
+      performRoll();
+    }
+    return;
+  }
+
+  state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
+  updateCurrentUnitDisplay();
+  state.animating = false;
+  rollBtn.disabled = false;
+  triggerRollInvite();
 });
 
 // ---------------- Learning feedback report ----------------

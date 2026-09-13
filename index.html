@@ -221,6 +221,25 @@
     </div>
   </div>
 
+  <!-- 카드뽑기 모달 -->
+  <div id="card-modal" class="modal hidden">
+    <div class="modal-content card-modal-content">
+      <h2>🃏 카드를 한 장 뽑아보세요!</h2>
+
+      <div id="card-grid" class="card-grid"></div>
+
+      <div id="card-trade-picker" class="hidden">
+        <p>어떤 팀과 자산을 바꿀까요?</p>
+        <div id="card-trade-options" class="option-row"></div>
+      </div>
+
+      <div id="card-result" class="hidden">
+        <p id="card-result-text"></p>
+        <button id="card-close-btn" class="modal-close-btn">다음</button>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>

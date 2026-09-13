@@ -662,6 +662,78 @@ body {
   transform: translateY(-2px);
 }
 
+/* ---------- Card draw modal ---------- */
+/* Flip is done with a 2D scaleX squash (not rotateY/3D) so Hangul
+   text is never rendered inside a 3D-transformed layer. */
+
+.card-modal-content {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 16px 0 4px;
+}
+
+.card-item {
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.25s ease;
+}
+
+.card-item:disabled {
+  cursor: default;
+}
+
+.card-item.flipping {
+  transform: scaleX(0);
+}
+
+.card-face {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.card-back-face {
+  background: var(--accent-gradient);
+  color: #fff;
+  font-size: 22px;
+}
+
+.card-front-face {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+
+.card-front-face .card-icon {
+  font-size: 20px;
+}
+
+#card-trade-picker p,
+#card-result p {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
 /* ---------- Event modal ---------- */
 
 .modal {
