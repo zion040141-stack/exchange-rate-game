@@ -8,94 +8,15 @@
 </head>
 <body>
 
-  <!-- 역할 선택 화면 -->
-  <div id="role-screen" class="setup-screen app-screen">
+  <!-- 시작 설정 화면 -->
+  <div id="setup-screen" class="setup-screen app-screen">
     <div class="setup-card">
       <div class="globe-badge">🌍</div>
       <h1 class="setup-title">환율 변동 정복하기</h1>
       <p class="setup-subtitle">보드게임으로 배우는 환율 변동</p>
 
-      <div class="role-btn-row">
-        <button id="role-teacher-btn" class="role-btn">
-          <span class="role-btn-icon">🧑‍🏫</span>
-          <span>교사</span>
-        </button>
-        <button id="role-student-btn" class="role-btn">
-          <span class="role-btn-icon">🧑‍🎓</span>
-          <span>학생</span>
-        </button>
-      </div>
-
-      <button id="dev-preview-btn" class="dev-link-btn">🛠 개발자: 리포트 화면 미리보기</button>
-    </div>
-  </div>
-
-  <!-- 교사 비밀번호 화면 -->
-  <div id="teacher-password-screen" class="setup-screen app-screen hidden">
-    <div class="setup-card">
-      <button class="back-btn" data-back="role-screen">← 뒤로</button>
-      <h1 class="setup-title">교사 인증</h1>
-      <p class="setup-subtitle">비밀번호를 입력하세요.</p>
-
-      <input id="teacher-password-input" class="password-input" type="password" inputmode="numeric" placeholder="••••" maxlength="8" />
-      <p id="password-error" class="password-error hidden">비밀번호가 올바르지 않습니다.</p>
-
-      <button id="teacher-password-submit" class="start-btn">확인</button>
-    </div>
-  </div>
-
-  <!-- 교사 설정 화면 -->
-  <div id="teacher-setup-screen" class="setup-screen app-screen hidden">
-    <div class="setup-card">
-      <button class="back-btn" data-back="role-screen">← 뒤로</button>
-      <h1 class="setup-title">교사용 설정</h1>
-      <p class="setup-subtitle">학급 전체 진행을 위한 설정입니다.</p>
-
       <div class="setup-section">
-        <span class="setup-label">인원수 (최대 25명)</span>
-        <select id="teacher-player-count" class="dropdown"></select>
-      </div>
-
-      <div class="setup-section">
-        <span class="setup-label">팀 수 (팀전으로만 진행)</span>
-        <select id="teacher-team-count" class="dropdown"></select>
-      </div>
-
-      <div class="setup-section">
-        <span class="setup-label">주사위 방식</span>
-        <div class="option-row" id="teacher-dice-mode-row">
-          <button class="option-btn" data-mode="app">사이트에서 굴리기</button>
-          <button class="option-btn" data-mode="manual">실제 주사위 사용</button>
-        </div>
-      </div>
-
-      <button id="teacher-start-btn" class="start-btn">게임 시작</button>
-    </div>
-  </div>
-
-  <!-- 학생 설정 화면 -->
-  <div id="student-setup-screen" class="setup-screen app-screen hidden">
-    <div class="setup-card">
-      <button class="back-btn" data-back="role-screen">← 뒤로</button>
-      <h1 class="setup-title">환율 변동 정복하기</h1>
-      <p class="setup-subtitle">보드게임으로 배우는 환율 변동</p>
-
-      <div class="setup-section">
-        <span class="setup-label">인원수</span>
-        <div class="option-row" id="player-count-row">
-          <button class="option-btn" data-count="1">1인</button>
-          <button class="option-btn" data-count="2">2인</button>
-          <button class="option-btn" data-count="3">3인</button>
-          <button class="option-btn" data-count="4">4인</button>
-        </div>
-      </div>
-
-      <div class="setup-section">
-        <span class="setup-label">팀 구성</span>
-        <div class="option-row" id="team-mode-row">
-          <button class="option-btn" data-mode="solo">개인전</button>
-          <button class="option-btn" data-mode="team">팀전</button>
-        </div>
+        <span class="setup-label">몇 팀이 참가하나요?</span>
         <div class="option-row" id="team-count-row"></div>
       </div>
 
@@ -108,6 +29,8 @@
       </div>
 
       <button id="start-game-btn" class="start-btn">게임 시작</button>
+
+      <button id="dev-preview-btn" class="dev-link-btn">🛠 개발자: 리포트 화면 미리보기</button>
     </div>
   </div>
 
@@ -129,6 +52,12 @@
         <div class="panel-block">
           <span class="panel-label">현재 차례</span>
           <span id="current-player" class="panel-value">-</span>
+        </div>
+
+        <div class="panel-block">
+          <span class="panel-label">현재 바퀴</span>
+          <span id="lap-count" class="panel-value">0 / 3</span>
+          <p class="lap-warning">3바퀴 돌면 게임 종료!</p>
         </div>
 
         <div class="panel-block">
@@ -205,9 +134,26 @@
 
   <!-- 이벤트 모달 (환율 뉴스 퀴즈) -->
   <div id="event-modal" class="modal hidden">
-    <div class="modal-content">
+    <div class="modal-content event-modal-content">
       <h2 id="event-title">이벤트</h2>
-      <p id="event-news" class="event-news"></p>
+
+      <div id="quiz-cards-row" class="quiz-cards-row hidden">
+        <div class="quiz-card quiz-news-card">
+          <div class="quiz-card-label">📰 뉴스 속보</div>
+          <div id="quiz-headline" class="quiz-headline"></div>
+          <div id="quiz-subtitle" class="quiz-subtitle"></div>
+          <div id="quiz-example" class="quiz-example hidden"></div>
+          <div id="quiz-caption" class="quiz-caption hidden"></div>
+        </div>
+        <div id="quiz-team-card" class="quiz-card quiz-team-card hidden">
+          <div class="quiz-card-label">현재 우리 팀은?</div>
+          <div id="quiz-team-icons" class="quiz-team-icons"></div>
+          <div id="quiz-team-label" class="quiz-team-label"></div>
+          <div id="quiz-team-quote" class="quiz-team-quote"></div>
+        </div>
+      </div>
+
+      <p id="event-news" class="event-news hidden"></p>
       <p id="event-question"></p>
 
       <div id="event-answer-row" class="option-row hidden">

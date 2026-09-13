@@ -6,12 +6,25 @@ const CATEGORIES = [
   "외국인 여행객",
   "내국인의 해외여행",
   "내국인의 해외 유학(노동)",
-  "외국인의 국내 유행(노동)",
+  "외국인의 국내 유학(노동)",
   "가계의 생활비",
 ];
 
 const CATEGORY_ICONS = ["📦", "🚢", "✈️", "🧳", "🎓", "💼", "🏠"];
 const START_ICON = "🏁";
+
+// Short, icon-friendly flavor for the quiz "team status" card — the real
+// category name (used everywhere else: tiles, report, explanations) stays
+// unchanged; this is just a punchier label for the small card.
+const CATEGORY_FLAVOR = [
+  { label: "물건 수입", icons: ["🏭", "➡️", "📦"], quote: "해외에서 물건을 사 와서 대금을 원화로 치러요." },
+  { label: "물건 수출", icons: ["📦", "➡️", "🚢"], quote: "물건을 해외에 팔고 외화를 벌어 와요." },
+  { label: "한국 온 외국인 관광객", icons: ["🧳", "➡️", "🇰🇷"], quote: "자기 나라 돈을 원화로 바꿔서 써요." },
+  { label: "해외여행 간 나", icons: ["🎒", "➡️", "✈️"], quote: "원화를 외화로 바꿔서 해외에서 써요." },
+  { label: "유학 간 나", icons: ["🎒", "➡️", "🎓"], quote: "원화를 외화로 바꿔서 유학 비용을 내요." },
+  { label: "한국에 유학 온 외국인", icons: ["🎓", "➡️", "💵"], quote: "한국에서 번(쓴) 돈을 자기 나라 돈으로 바꿔요." },
+  { label: "우리 집 생활비", icons: ["🏠", "➡️", "🛒"], quote: "수입 물건 값이 오르면 생활비도 영향을 받아요." },
+];
 
 // Placeholder special tiles — landing here just shows a notice for now.
 // Rules (skip a turn, draw a card, etc.) are still being designed.
@@ -67,7 +80,7 @@ const QUIZ_IMPACT_WHEN_UP = [
   "advantage",    // 외국인 여행객: 자국 통화를 원화로 환전 → 상승 시 더 많은 원화 수령
   "disadvantage", // 내국인의 해외여행: 원화를 외화로 환전 → 상승 시 더 많은 원화 필요
   "disadvantage", // 내국인의 해외 유학(노동): 원화를 외화로 환전 → 상승 시 더 많은 원화 필요
-  "disadvantage", // 외국인의 국내 유행(노동): 번 원화를 본국 통화로 환전 → 상승 시 더 적은 외화 수령
+  "disadvantage", // 외국인의 국내 유학(노동): 번 원화를 본국 통화로 환전 → 상승 시 더 적은 외화 수령
   "disadvantage", // 가계의 생활비: 수입 물가 상승 → 생활비 부담 증가
 ];
 
@@ -105,21 +118,6 @@ const DIRECTION_FACTORS = [
     explanation: "외환이 국내로 들어오는 일이 늘면 외환 공급이 늘어 환율이 내려가요.",
   },
 ];
-
-const NEWS_HEADLINES = {
-  up: [
-    "📰 미국이 기준금리를 인상하면서 달러가 강세를 보여 환율이 올랐습니다!",
-    "📰 국제 유가가 급등하면서 원화 가치가 떨어져 환율이 올랐습니다!",
-    "📰 우리나라 무역수지 적자가 커졌다는 소식에 환율이 올랐습니다!",
-    "📰 외국인 투자자들이 국내 주식을 대거 팔아치우며 환율이 올랐습니다!",
-  ],
-  down: [
-    "📰 우리나라 수출이 크게 늘었다는 소식에 환율이 내렸습니다!",
-    "📰 미국이 기준금리를 인하할 거라는 기대감에 환율이 내렸습니다!",
-    "📰 외국인 투자자들이 국내 주식을 대거 사들이며 환율이 내렸습니다!",
-    "📰 국제 원자재 가격이 안정되면서 환율이 내렸습니다!",
-  ],
-};
 
 const CARDS = [
   { id: "trade", icon: "🔄", title: "맞트레이드", desc: "원하는 팀과 자산을 맞바꿉니다. (혼자 하면 자산 ±2 랜덤)" },
@@ -173,7 +171,7 @@ function buildTiles() {
       isSpecial: Boolean(special),
       specialType: special ? special.type : null,
       categoryIndex,
-      category: isStart ? "출발" : special ? special.label : CATEGORIES[categoryIndex],
+      category: isStart ? "출발 / 도착" : special ? special.label : CATEGORIES[categoryIndex],
       icon: isStart ? START_ICON : special ? special.icon : CATEGORY_ICONS[categoryIndex],
     };
   });
@@ -191,137 +189,26 @@ function showScreen(id) {
   document.getElementById(id).classList.remove("hidden");
 }
 
-document.querySelectorAll(".back-btn").forEach((btn) => {
-  btn.addEventListener("click", () => showScreen(btn.dataset.back));
-});
-
-// ---------------- Role screen ----------------
-
-document.getElementById("role-teacher-btn").addEventListener("click", () => {
-  showScreen("teacher-password-screen");
-  document.getElementById("teacher-password-input").focus();
-});
-
-document.getElementById("role-student-btn").addEventListener("click", () => {
-  showScreen("student-setup-screen");
-});
-
-// ---------------- Teacher password screen ----------------
-
-const teacherPasswordInput = document.getElementById("teacher-password-input");
-const passwordErrorEl = document.getElementById("password-error");
-
-function checkTeacherPassword() {
-  if (teacherPasswordInput.value === TEACHER_PASSWORD) {
-    passwordErrorEl.classList.add("hidden");
-    teacherPasswordInput.value = "";
-    showScreen("teacher-setup-screen");
-  } else {
-    passwordErrorEl.classList.remove("hidden");
-    teacherPasswordInput.value = "";
-    teacherPasswordInput.focus();
-  }
-}
-
-document.getElementById("teacher-password-submit").addEventListener("click", checkTeacherPassword);
-teacherPasswordInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") checkTeacherPassword();
-});
-
-// ---------------- Teacher setup screen ----------------
-
-const teacherPlayerCountSelect = document.getElementById("teacher-player-count");
-const teacherTeamCountSelect = document.getElementById("teacher-team-count");
-const teacherDiceModeBtns = document.querySelectorAll("#teacher-dice-mode-row .option-btn");
-let teacherDiceMode = "app";
-
-for (let n = 2; n <= 25; n++) {
-  const opt = document.createElement("option");
-  opt.value = n;
-  opt.textContent = `${n}명`;
-  teacherPlayerCountSelect.appendChild(opt);
-}
-teacherPlayerCountSelect.value = 10;
-
-function renderTeacherTeamCountOptions() {
-  const playerCount = Number(teacherPlayerCountSelect.value);
-  const max = Math.min(playerCount - 1, ANIMAL_NAMES.length);
-  const prevValue = teacherTeamCountSelect.value;
-  teacherTeamCountSelect.innerHTML = "";
-  for (let t = 2; t <= max; t++) {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = `${t}팀`;
-    teacherTeamCountSelect.appendChild(opt);
-  }
-  if (prevValue && Number(prevValue) <= max) teacherTeamCountSelect.value = prevValue;
-}
-
-teacherPlayerCountSelect.addEventListener("change", renderTeacherTeamCountOptions);
-renderTeacherTeamCountOptions();
-
-teacherDiceModeBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    teacherDiceMode = btn.dataset.mode;
-    teacherDiceModeBtns.forEach((b) => b.classList.toggle("active", b === btn));
-  });
-});
-teacherDiceModeBtns[0].classList.add("active");
-
-document.getElementById("teacher-start-btn").addEventListener("click", () => {
-  setupState.playerCount = Number(teacherPlayerCountSelect.value);
-  setupState.teamMode = "team";
-  setupState.teamCount = Number(teacherTeamCountSelect.value);
-  setupState.diceMode = teacherDiceMode;
-  startGame();
-});
-
-// ---------------- Student setup screen ----------------
+// ---------------- Setup screen ----------------
 
 const setupState = {
-  playerCount: 1,
-  teamMode: "solo",
-  teamCount: null,
+  teamCount: 2,
   diceMode: "app",
 };
 
-const playerCountBtns = document.querySelectorAll("#player-count-row .option-btn");
-const teamModeBtns = document.querySelectorAll("#team-mode-row .option-btn");
 const teamCountRowEl = document.getElementById("team-count-row");
 const diceModeBtns = document.querySelectorAll("#dice-mode-row .option-btn");
 const startGameBtn = document.getElementById("start-game-btn");
 
-function renderPlayerCountButtons() {
-  playerCountBtns.forEach((btn) => {
-    btn.classList.toggle("active", Number(btn.dataset.count) === setupState.playerCount);
+for (let t = 1; t <= ANIMAL_NAMES.length; t++) {
+  const btn = document.createElement("button");
+  btn.className = "option-btn" + (t === setupState.teamCount ? " active" : "");
+  btn.textContent = `${t}팀`;
+  btn.addEventListener("click", () => {
+    setupState.teamCount = t;
+    teamCountRowEl.querySelectorAll(".option-btn").forEach((b) => b.classList.toggle("active", b === btn));
   });
-}
-
-function renderTeamModeButtons() {
-  const teamPossible = setupState.playerCount >= 3;
-  teamModeBtns.forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.mode === setupState.teamMode);
-    if (btn.dataset.mode === "team") btn.disabled = !teamPossible;
-  });
-}
-
-function renderTeamCountOptions() {
-  teamCountRowEl.innerHTML = "";
-  if (setupState.teamMode !== "team") return;
-  const max = setupState.playerCount - 1;
-  if (setupState.teamCount === null || setupState.teamCount > max) {
-    setupState.teamCount = max >= 2 ? 2 : null;
-  }
-  for (let t = 2; t <= max; t++) {
-    const btn = document.createElement("button");
-    btn.className = "option-btn small" + (setupState.teamCount === t ? " active" : "");
-    btn.textContent = `${t}팀`;
-    btn.addEventListener("click", () => {
-      setupState.teamCount = t;
-      renderTeamCountOptions();
-    });
-    teamCountRowEl.appendChild(btn);
-  }
+  teamCountRowEl.appendChild(btn);
 }
 
 function renderDiceModeButtons() {
@@ -329,25 +216,6 @@ function renderDiceModeButtons() {
     btn.classList.toggle("active", btn.dataset.mode === setupState.diceMode);
   });
 }
-
-playerCountBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    setupState.playerCount = Number(btn.dataset.count);
-    renderPlayerCountButtons();
-    renderTeamModeButtons();
-    renderTeamCountOptions();
-  });
-});
-
-teamModeBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    if (btn.disabled) return;
-    setupState.teamMode = btn.dataset.mode;
-    if (setupState.teamMode === "solo") setupState.teamCount = null;
-    renderTeamModeButtons();
-    renderTeamCountOptions();
-  });
-});
 
 diceModeBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -358,9 +226,6 @@ diceModeBtns.forEach((btn) => {
 
 startGameBtn.addEventListener("click", startGame);
 
-renderPlayerCountButtons();
-renderTeamModeButtons();
-renderTeamCountOptions();
 renderDiceModeButtons();
 
 // ---------------- Game state ----------------
@@ -385,37 +250,17 @@ function currentUnit() {
 
 function buildUnits() {
   const units = [];
-  if (setupState.teamMode === "team") {
-    for (let t = 0; t < setupState.teamCount; t++) {
-      units.push({
-        name: `${ANIMAL_NAMES[t % ANIMAL_NAMES.length]}팀`,
-        icon: ANIMAL_ICONS[t % ANIMAL_ICONS.length],
-        color: UNIT_COLORS[t % UNIT_COLORS.length],
-        memberCount: 0,
-        pos: 0,
-        score: 0,
-        distance: 0,
-        laps: 0,
-        skipNextTurn: false,
-      });
-    }
-    for (let i = 0; i < setupState.playerCount; i++) {
-      units[i % setupState.teamCount].memberCount += 1;
-    }
-  } else {
-    for (let i = 0; i < setupState.playerCount; i++) {
-      units.push({
-        name: `플레이어 ${i + 1}`,
-        icon: ANIMAL_ICONS[i % ANIMAL_ICONS.length],
-        color: UNIT_COLORS[i % UNIT_COLORS.length],
-        memberCount: null,
-        pos: 0,
-        score: 0,
-        distance: 0,
-        laps: 0,
-        skipNextTurn: false,
-      });
-    }
+  for (let t = 0; t < setupState.teamCount; t++) {
+    units.push({
+      name: `${ANIMAL_NAMES[t % ANIMAL_NAMES.length]}팀`,
+      icon: ANIMAL_ICONS[t % ANIMAL_ICONS.length],
+      color: UNIT_COLORS[t % UNIT_COLORS.length],
+      pos: 0,
+      score: 0,
+      distance: 0,
+      laps: 0,
+      skipNextTurn: false,
+    });
   }
   return units;
 }
@@ -452,6 +297,7 @@ const assetRankingEl = document.getElementById("asset-ranking");
 const turnCountEl = document.getElementById("turn-count");
 const currentUnitEl = document.getElementById("current-player");
 const currentTileEl = document.getElementById("current-tile");
+const lapCountEl = document.getElementById("lap-count");
 const rollBtn = document.getElementById("roll-btn");
 const logListEl = document.getElementById("log-list");
 const logToggleBtn = document.getElementById("log-toggle-btn");
@@ -465,6 +311,36 @@ logToggleBtn.addEventListener("click", () => {
 const eventModalEl = document.getElementById("event-modal");
 const eventTitleEl = document.getElementById("event-title");
 const eventNewsEl = document.getElementById("event-news");
+const quizCardsRowEl = document.getElementById("quiz-cards-row");
+const quizHeadlineEl = document.getElementById("quiz-headline");
+const quizSubtitleEl = document.getElementById("quiz-subtitle");
+const quizExampleEl = document.getElementById("quiz-example");
+const quizCaptionEl = document.getElementById("quiz-caption");
+const quizTeamCardEl = document.getElementById("quiz-team-card");
+const quizTeamIconsEl = document.getElementById("quiz-team-icons");
+const quizTeamLabelEl = document.getElementById("quiz-team-label");
+const quizTeamQuoteEl = document.getElementById("quiz-team-quote");
+
+function renderDirectionCard(direction) {
+  quizCardsRowEl.classList.remove("hidden");
+  quizExampleEl.classList.remove("hidden");
+  quizCaptionEl.classList.remove("hidden");
+
+  quizHeadlineEl.textContent = direction === "up" ? "환율 상승 📈" : "환율 하락 📉";
+  quizHeadlineEl.className = "quiz-headline " + (direction === "up" ? "direction-up" : "direction-down");
+  quizSubtitleEl.textContent = direction === "up" ? "(원화 약세)" : "(원화 강세)";
+  quizExampleEl.textContent = direction === "up" ? "1달러 1,000원 → 1,500원!" : "1달러 1,000원 → 700원!";
+  quizCaptionEl.textContent = direction === "up" ? "달러의 가치가 비싸졌어요!" : "달러의 가치가 싸졌어요!";
+}
+
+function renderTeamCard(categoryIndex) {
+  const flavor = CATEGORY_FLAVOR[categoryIndex];
+  quizTeamCardEl.classList.remove("hidden");
+  quizTeamIconsEl.innerHTML = flavor.icons.map((icon) => `<span>${icon}</span>`).join("");
+  quizTeamLabelEl.textContent = flavor.label;
+  quizTeamQuoteEl.textContent = `"${flavor.quote}"`;
+  return flavor.label;
+}
 const eventQuestionEl = document.getElementById("event-question");
 const eventAnswerRowEl = document.getElementById("event-answer-row");
 const answerBtns = document.querySelectorAll(".answer-btn");
@@ -481,9 +357,11 @@ const feedbackDetailEl = document.getElementById("feedback-detail");
 const eventCloseBtn = document.getElementById("event-close");
 
 function showFeedback(title, stat, detail, correct) {
+  const colorClass = correct ? "feedback-correct" : "feedback-wrong";
   feedbackTitleEl.textContent = title;
+  feedbackTitleEl.className = "feedback-title " + colorClass;
   feedbackStatEl.textContent = stat;
-  feedbackStatEl.className = "feedback-stat " + (correct ? "feedback-correct" : "feedback-wrong");
+  feedbackStatEl.className = "feedback-stat " + colorClass;
   feedbackDetailEl.textContent = detail;
   eventFeedbackEl.classList.remove("hidden");
 }
@@ -514,13 +392,6 @@ function renderUnitBar() {
     nameEl.className = "chip-name";
     nameEl.textContent = unit.name;
     info.appendChild(nameEl);
-
-    if (unit.memberCount !== null) {
-      const teamEl = document.createElement("div");
-      teamEl.className = "chip-team";
-      teamEl.textContent = `${unit.memberCount}명`;
-      info.appendChild(teamEl);
-    }
 
     chip.appendChild(info);
     playerBarEl.appendChild(chip);
@@ -615,6 +486,7 @@ function updateCurrentUnitDisplay() {
   const unit = currentUnit();
   currentUnitEl.textContent = `${unit.icon} ${unit.name}`;
   currentTileEl.textContent = tiles[unit.pos].category;
+  lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
   renderUnitBar();
 }
 
@@ -627,6 +499,8 @@ function correctImpactFor(categoryIndex, direction) {
 function showEvent(tile, unit) {
   nonsenseOptionsEl.classList.add("hidden");
   eventNewsEl.classList.add("hidden");
+  quizCardsRowEl.classList.add("hidden");
+  quizTeamCardEl.classList.add("hidden");
 
   if (tile.isStart) {
     pendingQuiz = null;
@@ -635,28 +509,27 @@ function showEvent(tile, unit) {
     eventQuestionEl.textContent = `${unit.icon} ${unit.name}이(가) 출발점을 지나 다시 게임을 이어갑니다.`;
     eventAnswerRowEl.classList.add("hidden");
     feedbackTitleEl.textContent = "";
+    feedbackTitleEl.className = "feedback-title";
     feedbackStatEl.textContent = "";
     feedbackStatEl.className = "feedback-stat";
     feedbackDetailEl.textContent = "";
     eventFeedbackEl.classList.remove("hidden");
   } else if (tile.isSpecial && tile.specialType === "island") {
     const direction = Math.random() < 0.5 ? "up" : "down";
-    const headlines = NEWS_HEADLINES[direction];
-    const news = headlines[Math.floor(Math.random() * headlines.length)];
     const categoryIndex = Math.floor(Math.random() * CATEGORIES.length);
     const correctImpact = correctImpactFor(categoryIndex, direction);
 
     pendingQuiz = { unit, direction, correctImpact, categoryIndex, category: CATEGORIES[categoryIndex], isIsland: true, isDirectionQuiz: false };
 
-    answerBtnA.textContent = "😀 유리해요";
+    answerBtnA.textContent = "👍 유리해요!";
     answerBtnA.dataset.impact = "advantage";
-    answerBtnB.textContent = "😟 불리해요";
+    answerBtnB.textContent = "👎 불리해요!";
     answerBtnB.dataset.impact = "disadvantage";
 
     eventTitleEl.textContent = "🏝️ 무인도 탈출 퀴즈 (고난도)";
-    eventNewsEl.classList.remove("hidden");
-    eventNewsEl.textContent = news;
-    eventQuestionEl.textContent = `이 상황에서 "${CATEGORY_ICONS[categoryIndex]} ${CATEGORIES[categoryIndex]}"는 유리할까요, 불리할까요, 아니면 상관없을까요?`;
+    renderDirectionCard(direction);
+    const islandLabel = renderTeamCard(categoryIndex);
+    eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${islandLabel}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
     answerNeutralBtn.classList.remove("hidden");
     eventAnswerRowEl.classList.remove("hidden");
     eventFeedbackEl.classList.add("hidden");
@@ -724,29 +597,33 @@ function setupNormalQuiz(unit, tile) {
     answerBtnB.dataset.impact = "down";
 
     eventTitleEl.textContent = "환율 예측 퀴즈";
-    eventNewsEl.classList.add("hidden");
-    eventQuestionEl.textContent = `${factor.text} 이 상황에서 환율은 상승할까요, 하락할까요?`;
+    quizCardsRowEl.classList.remove("hidden");
+    quizExampleEl.classList.add("hidden");
+    quizCaptionEl.classList.add("hidden");
+    quizTeamCardEl.classList.add("hidden");
+    quizHeadlineEl.textContent = factor.text;
+    quizHeadlineEl.className = "quiz-headline";
+    quizSubtitleEl.textContent = "";
+    eventQuestionEl.textContent = "이 상황에서 환율은 상승할까요, 하락할까요?";
     return;
   }
 
   const categoryIndex = tile ? tile.categoryIndex : Math.floor(Math.random() * CATEGORIES.length);
   const category = tile ? tile.category : CATEGORIES[categoryIndex];
   const direction = Math.random() < 0.5 ? "up" : "down";
-  const headlines = NEWS_HEADLINES[direction];
-  const news = headlines[Math.floor(Math.random() * headlines.length)];
   const correctImpact = correctImpactFor(categoryIndex, direction);
 
   pendingQuiz = { unit, isDirectionQuiz: false, direction, correctImpact, categoryIndex, category };
 
-  answerBtnA.textContent = "😀 유리해요";
+  answerBtnA.textContent = "👍 유리해요!";
   answerBtnA.dataset.impact = "advantage";
-  answerBtnB.textContent = "😟 불리해요";
+  answerBtnB.textContent = "👎 불리해요!";
   answerBtnB.dataset.impact = "disadvantage";
 
   eventTitleEl.textContent = tile ? `${category} 퀴즈` : "⚡ 더블 찬스 퀴즈";
-  eventNewsEl.classList.remove("hidden");
-  eventNewsEl.textContent = news;
-  eventQuestionEl.textContent = `이 상황에서 "${category}"는 유리할까요, 불리할까요?`;
+  renderDirectionCard(direction);
+  const shortLabel = renderTeamCard(categoryIndex);
+  eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${shortLabel}</span>에게 유리할까요?`;
 }
 
 answerBtns.forEach((btn) => {
@@ -765,14 +642,14 @@ answerBtns.forEach((btn) => {
       pendingQuiz.unit.score += correct ? 2 : -1;
       if (!correct) pendingQuiz.unit.skipNextTurn = true;
       showFeedback(
-        correct ? "탈출 성공!" : "탈출 실패...",
+        correct ? "정답!" : "땡!",
         correct ? "자산 +2" : "자산 -1",
         correct ? explanation : `${explanation} (다음 턴은 쉬어야 해요)`,
         correct
       );
     } else {
       pendingQuiz.unit.score += correct ? 1 : -1;
-      showFeedback(correct ? "정답이에요!" : "아쉬워요!", correct ? "자산 +1" : "자산 -1", explanation, correct);
+      showFeedback(correct ? "정답!" : "땡!", correct ? "자산 +1" : "자산 -1", explanation, correct);
     }
 
     eventAnswerRowEl.classList.add("hidden");
@@ -802,17 +679,40 @@ function resolveNonsense(correct) {
   const unit = pendingNonsense.unit;
   moveUnitBy(unit, correct ? 1 : -1);
   renderBoard();
+  lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
 
   nonsenseOptionsEl.classList.add("hidden");
   showFeedback(
-    correct ? "정답이에요!" : "아쉬워요!",
+    correct ? "정답!" : "땡!",
     correct ? "1칸 전진" : "1칸 후진",
     "(도착한 칸의 효과는 적용되지 않아요)",
     correct
   );
 }
 
+// Synthesized "tick" sound for token moves — no audio file needed.
+let audioCtx = null;
+
+function playMoveSound() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 720;
+    gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.11);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.11);
+  } catch (e) {
+    // Ignore audio errors (e.g. autoplay restrictions before any user gesture).
+  }
+}
+
 function moveUnitBy(unit, delta) {
+  playMoveSound();
   const rawPos = unit.pos + delta;
   if (rawPos >= tileCount) {
     unit.laps += 1;
@@ -835,6 +735,7 @@ function movePlayerStep(stepsLeft) {
   }
   moveUnitBy(unit, 1);
   renderBoard();
+  lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
   setTimeout(() => movePlayerStep(stepsLeft - 1), 180);
 }
 
@@ -1102,11 +1003,13 @@ function applyCard(card) {
     case "forward2":
       moveUnitBy(unit, 2);
       renderBoard();
+      lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
       showCardResult(`${card.icon} ${card.title}\n2칸 앞으로 이동했어요! (도착한 칸의 효과는 적용되지 않아요)`);
       break;
     case "back2":
       moveUnitBy(unit, -2);
       renderBoard();
+      lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
       showCardResult(`${card.icon} ${card.title}\n2칸 뒤로 이동했어요.`);
       break;
     case "skipTurn":
@@ -1264,7 +1167,7 @@ document.getElementById("end-game-btn").addEventListener("click", () => {
 });
 
 document.getElementById("report-restart-btn").addEventListener("click", () => {
-  showScreen("role-screen");
+  showScreen("setup-screen");
 });
 
 // ---------------- Developer preview (sample report data) ----------------
@@ -1274,7 +1177,6 @@ document.getElementById("dev-preview-btn").addEventListener("click", () => {
     name: `${ANIMAL_NAMES[t]}팀`,
     icon: ANIMAL_ICONS[t],
     color: UNIT_COLORS[t],
-    memberCount: 3,
     pos: 0,
     score: 0,
     distance: 10 + Math.floor(Math.random() * 30),
