@@ -751,7 +751,7 @@ body {
 /* Flip is done with a 2D scaleX squash (not rotateY/3D) so Hangul
    text is never rendered inside a 3D-transformed layer. */
 
-.modal-content.card-modal-content {
+.modal-content.card-modal-content.expanded {
   width: min(94vw, 960px);
   height: min(90vh, 760px);
   max-width: calc(100vw - 24px);

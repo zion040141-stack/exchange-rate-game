@@ -578,6 +578,7 @@ function showEvent(tile, unit) {
     cardDrawUnit = unit;
     cardRollAgain = false;
     cardPasswordGateEl.classList.add("hidden");
+    cardModalContentEl.classList.add("expanded");
     const originEl = document.querySelector(".tile.special-card");
     cardOriginRect = originEl ? originEl.getBoundingClientRect() : null;
     cardModalEl.classList.remove("hidden");
@@ -768,6 +769,7 @@ rollBtn.addEventListener("click", () => {
 // ---------------- Card draw (카드뽑기) ----------------
 
 const cardModalEl = document.getElementById("card-modal");
+const cardModalContentEl = cardModalEl.querySelector(".modal-content");
 const cardPasswordGateEl = document.getElementById("card-password-gate");
 const cardPasswordInput = document.getElementById("card-password-input");
 const cardPasswordErrorEl = document.getElementById("card-password-error");
@@ -797,6 +799,7 @@ function openCardPreview() {
   cardGridEl.classList.add("hidden");
   cardTradePickerEl.classList.add("hidden");
   cardResultEl.classList.add("hidden");
+  cardModalContentEl.classList.remove("expanded");
 
   cardModalEl.classList.remove("hidden");
 }
@@ -805,6 +808,7 @@ function checkCardPassword() {
   if (cardPasswordInput.value === TEACHER_PASSWORD) {
     cardPasswordInput.value = "";
     cardPasswordGateEl.classList.add("hidden");
+    cardModalContentEl.classList.add("expanded");
     const originEl = document.querySelector(".tile.special-card");
     cardOriginRect = originEl ? originEl.getBoundingClientRect() : null;
     renderCardGrid();
