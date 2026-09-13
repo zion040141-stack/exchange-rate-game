@@ -13,9 +13,9 @@ const CATEGORIES = [
 const CATEGORY_ICONS = ["📦", "🚢", "✈️", "🧳", "🎓", "💼", "🏠"];
 const START_ICON = "🏁";
 
-const PLAYER_COLORS = ["#2f6fed", "#ef5350", "#0f9488", "#ab47bc"];
-const TEAM_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
-const TEAM_COLORS = [
+const ANIMAL_NAMES = ["토끼", "강아지", "고양이", "호랑이", "판다", "여우", "곰", "원숭이", "코알라", "펭귄"];
+const ANIMAL_ICONS = ["🐰", "🐶", "🐱", "🐯", "🐼", "🦊", "🐻", "🐵", "🐨", "🐧"];
+const UNIT_COLORS = [
   "#2f6fed", "#ef5350", "#0f9488", "#ab47bc", "#f0932b",
   "#20bf6b", "#eb3b5a", "#4b6584", "#a55eea", "#0fb9b1",
 ];
@@ -153,7 +153,7 @@ teacherPlayerCountSelect.value = 10;
 
 function renderTeacherTeamCountOptions() {
   const playerCount = Number(teacherPlayerCountSelect.value);
-  const max = Math.min(playerCount - 1, TEAM_LABELS.length);
+  const max = Math.min(playerCount - 1, ANIMAL_NAMES.length);
   const prevValue = teacherTeamCountSelect.value;
   teacherTeamCountSelect.innerHTML = "";
   for (let t = 2; t <= max; t++) {
@@ -274,8 +274,8 @@ renderDiceModeButtons();
 // ---------------- Game state ----------------
 
 const state = {
-  players: [],
-  currentPlayerIndex: 0,
+  units: [],
+  currentUnitIndex: 0,
   turn: 0,
   diceMode: "app",
   animating: false,
@@ -284,24 +284,42 @@ const state = {
 
 let pendingQuiz = null;
 
-function currentPlayer() {
-  return state.players[state.currentPlayerIndex];
+function currentUnit() {
+  return state.units[state.currentUnitIndex];
+}
+
+function buildUnits() {
+  const units = [];
+  if (setupState.teamMode === "team") {
+    for (let t = 0; t < setupState.teamCount; t++) {
+      units.push({
+        name: `${ANIMAL_NAMES[t % ANIMAL_NAMES.length]}팀`,
+        icon: ANIMAL_ICONS[t % ANIMAL_ICONS.length],
+        color: UNIT_COLORS[t % UNIT_COLORS.length],
+        memberCount: 0,
+        pos: 0,
+      });
+    }
+    for (let i = 0; i < setupState.playerCount; i++) {
+      units[i % setupState.teamCount].memberCount += 1;
+    }
+  } else {
+    for (let i = 0; i < setupState.playerCount; i++) {
+      units.push({
+        name: `플레이어 ${i + 1}`,
+        icon: ANIMAL_ICONS[i % ANIMAL_ICONS.length],
+        color: UNIT_COLORS[i % UNIT_COLORS.length],
+        memberCount: null,
+        pos: 0,
+      });
+    }
+  }
+  return units;
 }
 
 function startGame() {
-  const players = [];
-  for (let i = 0; i < setupState.playerCount; i++) {
-    const team = setupState.teamMode === "team" ? i % setupState.teamCount : null;
-    players.push({
-      name: `플레이어 ${i + 1}`,
-      color: team !== null ? TEAM_COLORS[team % TEAM_COLORS.length] : PLAYER_COLORS[i % PLAYER_COLORS.length],
-      team,
-      pos: 0,
-    });
-  }
-
-  state.players = players;
-  state.currentPlayerIndex = 0;
+  state.units = buildUnits();
+  state.currentUnitIndex = 0;
   state.turn = 0;
   state.diceMode = setupState.diceMode;
   state.animating = false;
@@ -310,9 +328,9 @@ function startGame() {
   showScreen("game-screen");
 
   turnCountEl.textContent = state.turn;
-  renderPlayerBar();
+  renderUnitBar();
   renderBoard();
-  updateCurrentPlayerDisplay();
+  updateCurrentUnitDisplay();
   triggerRollInvite();
 }
 
@@ -327,7 +345,7 @@ function triggerRollInvite() {
 const boardEl = document.getElementById("board");
 const playerBarEl = document.getElementById("player-bar");
 const turnCountEl = document.getElementById("turn-count");
-const currentPlayerEl = document.getElementById("current-player");
+const currentUnitEl = document.getElementById("current-player");
 const currentTileEl = document.getElementById("current-tile");
 const rollBtn = document.getElementById("roll-btn");
 const logListEl = document.getElementById("log-list");
@@ -349,16 +367,16 @@ const diceResultEl = document.getElementById("dice-result");
 const manualDiceModalEl = document.getElementById("manual-dice-modal");
 const manualDiceGridEl = document.getElementById("manual-dice-grid");
 
-function renderPlayerBar() {
+function renderUnitBar() {
   playerBarEl.innerHTML = "";
-  state.players.forEach((player, idx) => {
+  state.units.forEach((unit, idx) => {
     const chip = document.createElement("div");
-    chip.className = "player-chip" + (idx === state.currentPlayerIndex ? " active" : "");
-    chip.style.setProperty("--chip-color", player.color);
+    chip.className = "player-chip" + (idx === state.currentUnitIndex ? " active" : "");
+    chip.style.setProperty("--chip-color", unit.color);
 
     const avatar = document.createElement("div");
     avatar.className = "chip-avatar";
-    avatar.textContent = `P${idx + 1}`;
+    avatar.textContent = unit.icon;
     chip.appendChild(avatar);
 
     const info = document.createElement("div");
@@ -366,14 +384,13 @@ function renderPlayerBar() {
 
     const nameEl = document.createElement("div");
     nameEl.className = "chip-name";
-    nameEl.textContent = player.name;
+    nameEl.textContent = unit.name;
     info.appendChild(nameEl);
 
-    if (player.team !== null) {
+    if (unit.memberCount !== null) {
       const teamEl = document.createElement("div");
       teamEl.className = "chip-team";
-      teamEl.textContent = `${TEAM_LABELS[player.team]}팀`;
-      teamEl.style.color = TEAM_COLORS[player.team];
+      teamEl.textContent = `${unit.memberCount}명`;
       info.appendChild(teamEl);
     }
 
@@ -412,27 +429,15 @@ function renderBoard() {
     label.textContent = tile.category;
     el.appendChild(label);
 
-    const occupants = state.players.filter((p) => p.pos === tile.index);
+    const occupants = state.units.filter((u) => u.pos === tile.index);
     if (occupants.length > 0) {
       el.classList.add("active-player");
-      const isTeamMode = occupants[0].team !== null;
-      const shown = [];
-      const seenTeams = new Set();
-      occupants.forEach((p) => {
-        if (isTeamMode) {
-          if (seenTeams.has(p.team)) return;
-          seenTeams.add(p.team);
-        }
-        shown.push(p);
-      });
-
       const tokenWrap = document.createElement("div");
       tokenWrap.className = "token-wrap";
-      shown.forEach((p) => {
-        const isCurrentGroup = isTeamMode ? p.team === currentPlayer().team : p === currentPlayer();
+      occupants.forEach((u) => {
         const token = document.createElement("div");
-        token.className = "player-token" + (isCurrentGroup ? " current" : "");
-        token.style.background = p.color;
+        token.className = "unit-token" + (u === currentUnit() ? " current" : "");
+        token.textContent = u.icon;
         tokenWrap.appendChild(token);
       });
       el.appendChild(tokenWrap);
@@ -448,11 +453,11 @@ function addLog(text) {
   logListEl.prepend(li);
 }
 
-function updateCurrentPlayerDisplay() {
-  const player = currentPlayer();
-  currentPlayerEl.textContent = player.name;
-  currentTileEl.textContent = tiles[player.pos].category;
-  renderPlayerBar();
+function updateCurrentUnitDisplay() {
+  const unit = currentUnit();
+  currentUnitEl.textContent = `${unit.icon} ${unit.name}`;
+  currentTileEl.textContent = tiles[unit.pos].category;
+  renderUnitBar();
 }
 
 function correctImpactFor(categoryIndex, direction) {
@@ -461,12 +466,12 @@ function correctImpactFor(categoryIndex, direction) {
   return baseUp === "advantage" ? "disadvantage" : "advantage";
 }
 
-function showEvent(tile, player) {
+function showEvent(tile, unit) {
   if (tile.isStart) {
     pendingQuiz = null;
     eventTitleEl.textContent = "🏁 출발점 통과";
     eventNewsEl.textContent = "";
-    eventQuestionEl.textContent = `${player.name}이(가) 출발점을 지나 다시 게임을 이어갑니다.`;
+    eventQuestionEl.textContent = `${unit.icon} ${unit.name}이(가) 출발점을 지나 다시 게임을 이어갑니다.`;
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackTextEl.textContent = "";
     eventFeedbackEl.classList.remove("hidden");
@@ -476,7 +481,7 @@ function showEvent(tile, player) {
     const news = headlines[Math.floor(Math.random() * headlines.length)];
     const correctImpact = correctImpactFor(tile.categoryIndex, direction);
 
-    pendingQuiz = { tile, player, direction, correctImpact };
+    pendingQuiz = { tile, unit, direction, correctImpact };
 
     eventTitleEl.textContent = `${tile.category} 퀴즈`;
     eventNewsEl.textContent = news;
@@ -495,8 +500,7 @@ answerBtns.forEach((btn) => {
     const explanation = QUIZ_EXPLANATIONS[pendingQuiz.tile.categoryIndex][pendingQuiz.direction];
 
     state.quizLog.push({
-      playerName: pendingQuiz.player.name,
-      team: pendingQuiz.player.team,
+      unitName: pendingQuiz.unit.name,
       category: pendingQuiz.tile.category,
       correct,
     });
@@ -510,23 +514,23 @@ answerBtns.forEach((btn) => {
 
 eventCloseBtn.addEventListener("click", () => {
   eventModalEl.classList.add("hidden");
-  state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
-  updateCurrentPlayerDisplay();
+  state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
+  updateCurrentUnitDisplay();
   state.animating = false;
   rollBtn.disabled = false;
   triggerRollInvite();
 });
 
 function movePlayerStep(stepsLeft) {
-  const player = currentPlayer();
+  const unit = currentUnit();
   if (stepsLeft === 0) {
-    const tile = tiles[player.pos];
+    const tile = tiles[unit.pos];
     currentTileEl.textContent = tile.category;
-    addLog(`${state.turn}턴: ${player.name} - ${tile.category} 도착`);
-    showEvent(tile, player);
+    addLog(`${state.turn}턴: ${unit.icon} ${unit.name} - ${tile.category} 도착`);
+    showEvent(tile, unit);
     return;
   }
-  player.pos = (player.pos + 1) % tileCount;
+  unit.pos = (unit.pos + 1) % tileCount;
   renderBoard();
   setTimeout(() => movePlayerStep(stepsLeft - 1), 180);
 }
@@ -630,14 +634,33 @@ function computeStatsBy(keyFn) {
   return stats;
 }
 
+function wrongCategoriesFor(unitName) {
+  const seen = new Set();
+  const wrong = [];
+  state.quizLog.forEach((e) => {
+    if (e.unitName === unitName && !e.correct && !seen.has(e.category)) {
+      seen.add(e.category);
+      wrong.push(e.category);
+    }
+  });
+  return wrong;
+}
+
 function renderReport() {
-  const playerStats = computeStatsBy((e) => e.playerName);
+  const unitStats = computeStatsBy((e) => e.unitName);
   reportPlayerListEl.innerHTML = "";
-  state.players.forEach((p) => {
-    const s = playerStats.get(p.name) || { correct: 0, total: 0 };
+  state.units.forEach((u) => {
+    const s = unitStats.get(u.name) || { correct: 0, total: 0 };
+    const wrong = wrongCategoriesFor(u.name);
     const row = document.createElement("div");
     row.className = "report-player-row";
-    row.innerHTML = `<span class="report-player-name">${p.name}</span><span class="report-player-score">${s.correct} / ${s.total}</span>`;
+    row.innerHTML = `
+      <div class="report-player-top">
+        <span class="report-player-name">${u.icon} ${u.name}</span>
+        <span class="report-player-score">${s.correct} / ${s.total}</span>
+      </div>
+      ${wrong.length > 0 ? `<div class="report-player-wrong">틀린 개념: ${wrong.join(", ")}</div>` : ""}
+    `;
     reportPlayerListEl.appendChild(row);
   });
 
@@ -674,18 +697,20 @@ document.getElementById("report-restart-btn").addEventListener("click", () => {
 // ---------------- Developer preview (sample report data) ----------------
 
 document.getElementById("dev-preview-btn").addEventListener("click", () => {
-  const samplePlayers = [
-    { name: "플레이어 1", team: null, pos: 0, color: PLAYER_COLORS[0] },
-    { name: "플레이어 2", team: null, pos: 0, color: PLAYER_COLORS[1] },
-    { name: "플레이어 3", team: null, pos: 0, color: PLAYER_COLORS[2] },
-  ];
-  state.players = samplePlayers;
+  const sampleUnits = [0, 1, 2].map((t) => ({
+    name: `${ANIMAL_NAMES[t]}팀`,
+    icon: ANIMAL_ICONS[t],
+    color: UNIT_COLORS[t],
+    memberCount: 3,
+    pos: 0,
+  }));
+  state.units = sampleUnits;
   state.quizLog = [];
-  samplePlayers.forEach((p) => {
+  sampleUnits.forEach((u) => {
     CATEGORIES.forEach((category) => {
       const attempts = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < attempts; i++) {
-        state.quizLog.push({ playerName: p.name, team: null, category, correct: Math.random() < 0.65 });
+        state.quizLog.push({ unitName: u.name, category, correct: Math.random() < 0.65 });
       }
     });
   });

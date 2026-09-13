@@ -265,13 +265,11 @@ body {
 }
 
 .chip-avatar {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: var(--chip-color, var(--accent));
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
+  background: var(--accent-soft);
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -289,7 +287,8 @@ body {
 
 .chip-team {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .layout {
@@ -436,18 +435,15 @@ body {
   gap: 3px;
 }
 
-.player-token {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 2px solid var(--surface);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+.unit-token {
+  font-size: 16px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
   animation: token-pop 0.25s ease;
 }
 
-.player-token.current {
-  width: 15px;
-  height: 15px;
+.unit-token.current {
+  font-size: 20px;
 }
 
 @keyframes token-pop {
@@ -682,6 +678,12 @@ body {
   animation: modal-pop 0.2s ease;
 }
 
+#event-modal .modal-content {
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  padding: 32px;
+}
+
 @keyframes modal-pop {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -793,8 +795,6 @@ body {
 }
 
 .report-player-row {
-  display: flex;
-  justify-content: space-between;
   padding: 10px 14px;
   font-size: 13px;
   border-bottom: 1px solid var(--border);
@@ -804,6 +804,11 @@ body {
   border-bottom: none;
 }
 
+.report-player-top {
+  display: flex;
+  justify-content: space-between;
+}
+
 .report-player-name {
   font-weight: 600;
 }
@@ -811,6 +816,12 @@ body {
 .report-player-score {
   font-weight: 700;
   color: var(--accent);
+}
+
+.report-player-wrong {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: #e03131;
 }
 
 .report-weak-list {
