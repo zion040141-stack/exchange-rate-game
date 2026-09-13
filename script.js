@@ -17,8 +17,23 @@ const START_ICON = "🏁";
 // Rules (skip a turn, draw a card, etc.) are still being designed.
 const SPECIAL_TILES = {
   6: { type: "island", label: "무인도", icon: "🏝️" },
+  9: { type: "nonsense", label: "넌센스 퀴즈", icon: "❓" },
   18: { type: "card", label: "카드뽑기", icon: "🃏" },
+  21: { type: "nonsense", label: "넌센스 퀴즈", icon: "❓" },
 };
+
+const NONSENSE_QUESTIONS = [
+  { question: "세상에서 가장 빠른 새는?", answer: "눈 깜짝할 새" },
+  { question: "빵 중에서 가장 슬픈 빵은?", answer: "울면" },
+  { question: "세상에서 가장 추운 바다는?", answer: "썰렁해" },
+  { question: "이 세상에서 가장 무서운 개는?", answer: "안개" },
+  { question: "세상에서 가장 아름다운 개는?", answer: "무지개" },
+  { question: "공은 공인데 던질 수 없는 공은?", answer: "성공" },
+  { question: "때리면 때릴수록 좋아하는 것은?", answer: "북" },
+  { question: "먹으면 먹을수록 계속 많아지는 것은?", answer: "나이" },
+  { question: "세상에서 가장 뜨거운 과일은?", answer: "천도복숭아" },
+  { question: "세상에서 가장 잘 우는 나라는?", answer: "우루과이" },
+];
 
 const ANIMAL_NAMES = ["토끼", "강아지", "고양이", "호랑이", "판다", "여우", "곰", "원숭이", "코알라", "펭귄"];
 const ANIMAL_ICONS = ["🐰", "🐶", "🐱", "🐯", "🐼", "🦊", "🐻", "🐵", "🐨", "🐧"];
@@ -85,6 +100,11 @@ const TRIVIA_FACTS = [
   "환율이 내리면 수입 물가가 내려가 생활비 부담이 줄 수 있어요.",
   "1997년 외환위기 때 원/달러 환율이 크게 치솟았어요.",
   "중앙은행은 환율이 너무 흔들리면 외환보유액으로 시장에 개입하기도 해요.",
+  "환율은 두 나라 화폐를 바꿀 때 적용되는 교환 비율이에요.",
+  "수출이 늘면 원화 가치가 오르는(환율이 내리는) 경향이 있어요.",
+  "환율이 오르면 수출업자는 가격 경쟁력이 좋아져 유리해질 수 있어요.",
+  "미국 기준금리가 오르면 달러가 강세를 보여 원/달러 환율이 오르는 경우가 많아요.",
+  "환율 변동이 심하면 정부나 중앙은행이 '환율 안정화 정책'을 펴기도 해요.",
 ];
 
 function buildPerimeterCells() {
@@ -409,6 +429,15 @@ const eventQuestionEl = document.getElementById("event-question");
 const eventAnswerRowEl = document.getElementById("event-answer-row");
 const answerBtns = document.querySelectorAll(".answer-btn");
 const answerNeutralBtn = document.getElementById("answer-neutral-btn");
+const nonsenseInputBlockEl = document.getElementById("nonsense-input-block");
+const nonsenseInputEl = document.getElementById("nonsense-input");
+const nonsenseRevealBtn = document.getElementById("nonsense-reveal-btn");
+const nonsenseRevealEl = document.getElementById("nonsense-reveal");
+const nonsenseAnswerTextEl = document.getElementById("nonsense-answer-text");
+const nonsenseCorrectBtn = document.getElementById("nonsense-correct-btn");
+const nonsenseWrongBtn = document.getElementById("nonsense-wrong-btn");
+
+let pendingNonsense = null;
 const eventFeedbackEl = document.getElementById("event-feedback");
 const eventFeedbackTextEl = document.getElementById("event-feedback-text");
 const eventCloseBtn = document.getElementById("event-close");
@@ -550,6 +579,10 @@ function correctImpactFor(categoryIndex, direction) {
 }
 
 function showEvent(tile, unit) {
+  nonsenseInputBlockEl.classList.add("hidden");
+  nonsenseRevealEl.classList.add("hidden");
+  eventNewsEl.classList.add("hidden");
+
   if (tile.isStart) {
     pendingQuiz = null;
     eventTitleEl.textContent = "🏁 출발점 통과";
@@ -568,11 +601,24 @@ function showEvent(tile, unit) {
     pendingQuiz = { unit, direction, correctImpact, categoryIndex, isIsland: true };
 
     eventTitleEl.textContent = "🏝️ 무인도 탈출 퀴즈 (고난도)";
+    eventNewsEl.classList.remove("hidden");
     eventNewsEl.textContent = news;
     eventQuestionEl.textContent = `이 상황에서 "${CATEGORY_ICONS[categoryIndex]} ${CATEGORIES[categoryIndex]}"는 유리할까요, 불리할까요, 아니면 상관없을까요?`;
     answerNeutralBtn.classList.remove("hidden");
     eventAnswerRowEl.classList.remove("hidden");
     eventFeedbackEl.classList.add("hidden");
+  } else if (tile.isSpecial && tile.specialType === "nonsense") {
+    pendingQuiz = null;
+    const q = NONSENSE_QUESTIONS[Math.floor(Math.random() * NONSENSE_QUESTIONS.length)];
+    pendingNonsense = { unit, question: q };
+
+    eventTitleEl.textContent = "❓ 넌센스 퀴즈";
+    eventNewsEl.textContent = "";
+    eventQuestionEl.textContent = q.question;
+    eventAnswerRowEl.classList.add("hidden");
+    eventFeedbackEl.classList.add("hidden");
+    nonsenseInputEl.value = "";
+    nonsenseInputBlockEl.classList.remove("hidden");
   } else if (tile.isSpecial && tile.specialType === "card") {
     cardIsPreview = false;
     cardDrawUnit = unit;
@@ -593,6 +639,7 @@ function showEvent(tile, unit) {
     pendingQuiz = { tile, unit, direction, correctImpact, categoryIndex: tile.categoryIndex, isIsland: false };
 
     eventTitleEl.textContent = `${tile.category} 퀴즈`;
+    eventNewsEl.classList.remove("hidden");
     eventNewsEl.textContent = news;
     eventQuestionEl.textContent = `이 상황에서 "${tile.category}"는 유리할까요, 불리할까요?`;
     answerNeutralBtn.classList.add("hidden");
@@ -648,6 +695,40 @@ eventCloseBtn.addEventListener("click", () => {
   advanceTurnOrEndGame();
 });
 
+nonsenseRevealBtn.addEventListener("click", () => {
+  nonsenseInputBlockEl.classList.add("hidden");
+  nonsenseAnswerTextEl.textContent = `정답: ${pendingNonsense.question.answer}`;
+  nonsenseRevealEl.classList.remove("hidden");
+});
+
+function resolveNonsense(correct) {
+  const unit = pendingNonsense.unit;
+  moveUnitBy(unit, correct ? 1 : -1);
+  renderBoard();
+
+  nonsenseRevealEl.classList.add("hidden");
+  eventFeedbackTextEl.textContent = correct
+    ? "✅ 정답이에요! 1칸 전진합니다. (도착한 칸의 효과는 적용되지 않아요)"
+    : "❌ 아쉬워요! 1칸 후진합니다.";
+  eventFeedbackTextEl.className = correct ? "feedback-correct" : "feedback-wrong";
+  eventFeedbackEl.classList.remove("hidden");
+}
+
+nonsenseCorrectBtn.addEventListener("click", () => resolveNonsense(true));
+nonsenseWrongBtn.addEventListener("click", () => resolveNonsense(false));
+
+function moveUnitBy(unit, delta) {
+  const rawPos = unit.pos + delta;
+  if (rawPos >= tileCount) {
+    unit.laps += 1;
+    if (unit.laps >= FINISH_LAPS) state.gameEndedByLaps = true;
+  } else if (rawPos < 0) {
+    unit.laps = Math.max(0, unit.laps - 1);
+  }
+  unit.pos = ((rawPos % tileCount) + tileCount) % tileCount;
+  unit.distance = Math.max(0, unit.distance + delta);
+}
+
 function movePlayerStep(stepsLeft) {
   const unit = currentUnit();
   if (stepsLeft === 0) {
@@ -657,12 +738,7 @@ function movePlayerStep(stepsLeft) {
     showEvent(tile, unit);
     return;
   }
-  unit.pos = (unit.pos + 1) % tileCount;
-  unit.distance += 1;
-  if (unit.pos === 0) {
-    unit.laps += 1;
-    if (unit.laps >= FINISH_LAPS) state.gameEndedByLaps = true;
-  }
+  moveUnitBy(unit, 1);
   renderBoard();
   setTimeout(() => movePlayerStep(stepsLeft - 1), 180);
 }
@@ -929,14 +1005,12 @@ function applyCard(card) {
       break;
     }
     case "forward2":
-      unit.pos = (unit.pos + 2) % tileCount;
-      unit.distance += 2;
+      moveUnitBy(unit, 2);
       renderBoard();
       showCardResult(`${card.icon} ${card.title}\n2칸 앞으로 이동했어요! (도착한 칸의 효과는 적용되지 않아요)`);
       break;
     case "back2":
-      unit.pos = (unit.pos - 2 + tileCount) % tileCount;
-      unit.distance = Math.max(0, unit.distance - 2);
+      moveUnitBy(unit, -2);
       renderBoard();
       showCardResult(`${card.icon} ${card.title}\n2칸 뒤로 이동했어요.`);
       break;
@@ -989,6 +1063,7 @@ function triggerBonusQuiz(unit) {
   pendingQuiz = { unit, direction, correctImpact, categoryIndex, isIsland: false };
 
   eventTitleEl.textContent = "⚡ 더블 찬스 퀴즈";
+  eventNewsEl.classList.remove("hidden");
   eventNewsEl.textContent = news;
   eventQuestionEl.textContent = `이 상황에서 "${CATEGORY_ICONS[categoryIndex]} ${CATEGORIES[categoryIndex]}"는 유리할까요, 불리할까요?`;
   answerNeutralBtn.classList.add("hidden");

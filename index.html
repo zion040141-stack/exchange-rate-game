@@ -216,6 +216,19 @@
         <button id="answer-neutral-btn" class="answer-btn hidden" data-impact="none">🤷 상관없어요</button>
       </div>
 
+      <div id="nonsense-input-block" class="hidden">
+        <input id="nonsense-input" type="text" class="password-input nonsense-input" placeholder="정답을 입력해보세요" />
+        <button id="nonsense-reveal-btn" class="start-btn">정답 보기</button>
+      </div>
+
+      <div id="nonsense-reveal" class="hidden">
+        <p id="nonsense-answer-text" class="nonsense-answer-text"></p>
+        <div class="option-row">
+          <button id="nonsense-correct-btn" class="answer-btn">😀 맞았어요</button>
+          <button id="nonsense-wrong-btn" class="answer-btn">😢 틀렸어요</button>
+        </div>
+      </div>
+
       <div id="event-feedback" class="hidden">
         <p id="event-feedback-text"></p>
         <button id="event-close" class="modal-close-btn">다음</button>

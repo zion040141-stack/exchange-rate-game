@@ -192,6 +192,18 @@ body {
   padding: 0 0 16px;
 }
 
+.nonsense-input {
+  font-size: 16px;
+  letter-spacing: normal;
+}
+
+.nonsense-answer-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
 .password-input {
   width: 100%;
   padding: 14px;
@@ -396,6 +408,9 @@ body {
 
 .special-card { background: #f1f0ff; border-bottom-color: #b3a9f7; }
 .special-card .tile-label { color: #5f3dc4; }
+
+.special-nonsense { background: #ffe3e3; border-bottom-color: #ff8787; }
+.special-nonsense .tile-label { color: #c92a2a; }
 
 .tile.active-player {
   outline: 2px solid var(--accent);
