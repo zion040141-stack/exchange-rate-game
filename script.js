@@ -23,16 +23,31 @@ const SPECIAL_TILES = {
 };
 
 const NONSENSE_QUESTIONS = [
-  { question: "세상에서 가장 빠른 새는?", answer: "눈 깜짝할 새" },
-  { question: "빵 중에서 가장 슬픈 빵은?", answer: "울면" },
-  { question: "세상에서 가장 추운 바다는?", answer: "썰렁해" },
-  { question: "이 세상에서 가장 무서운 개는?", answer: "안개" },
-  { question: "세상에서 가장 아름다운 개는?", answer: "무지개" },
-  { question: "공은 공인데 던질 수 없는 공은?", answer: "성공" },
-  { question: "때리면 때릴수록 좋아하는 것은?", answer: "북" },
-  { question: "먹으면 먹을수록 계속 많아지는 것은?", answer: "나이" },
-  { question: "세상에서 가장 뜨거운 과일은?", answer: "천도복숭아" },
-  { question: "세상에서 가장 잘 우는 나라는?", answer: "우루과이" },
+  {
+    question: "영희에게는 오빠가 3명 있습니다. 오빠들에게는 여동생이 각각 1명씩 있습니다. 오빠들의 여동생은 모두 몇 명일까요?",
+    options: ["1명", "2명", "3명", "4명"],
+    answerIndex: 0,
+  },
+  {
+    question: "쌍둥이 형제가 있습니다. 형은 동생보다 5분 먼저 태어났습니다. 동생이 태어난 요일이 화요일이라면, 형이 태어난 요일은 무슨 요일일까요?",
+    options: ["월요일", "화요일", "수요일", "알 수 없다"],
+    answerIndex: 1,
+  },
+  {
+    question: "다음 중 짝수는 몇 개일까요? 1, 2, 3, 4, 5, 육, 7, 8, 구, 10",
+    options: ["4개", "5개", "6개", "7개"],
+    answerIndex: 1,
+  },
+  {
+    question: "철수 엄마에게는 아들이 넷 있습니다. 첫째는 일수, 둘째는 이수, 셋째는 삼수입니다. 넷째의 이름은 무엇일까요?",
+    options: ["사수", "철수", "넷수", "막내"],
+    answerIndex: 1,
+  },
+  {
+    question: "열두 달 중에서 28일이 있는 달은 몇 개일까요?",
+    options: ["1개", "4개", "12개", "2개"],
+    answerIndex: 2,
+  },
 ];
 
 const ANIMAL_NAMES = ["토끼", "강아지", "고양이", "호랑이", "판다", "여우", "곰", "원숭이", "코알라", "펭귄"];
@@ -64,6 +79,31 @@ const QUIZ_EXPLANATIONS = [
   { up: "환율이 오르면 유학비·생활비 부담이 커져 불리해요.", down: "환율이 내리면 유학비·생활비 부담이 줄어 유리해요." },
   { up: "환율이 오르면 국내에서 번 돈을 본국 돈으로 바꿀 때 더 적게 받아 불리해요.", down: "환율이 내리면 국내에서 번 돈을 본국 돈으로 바꿀 때 더 많이 받아 유리해요." },
   { up: "환율이 오르면 수입 물가가 올라 생활비 부담이 커져 불리해요.", down: "환율이 내리면 수입 물가가 내려 생활비 부담이 줄어 유리해요." },
+];
+
+// Only the four factors from the textbook table (외환의 수요/공급) — no
+// additional economic content beyond what was explicitly provided.
+const DIRECTION_FACTORS = [
+  {
+    text: "외국 상품의 수입이 늘었습니다.",
+    direction: "up",
+    explanation: "수입이 늘면 외국 상품 대금을 외환으로 지급해야 해서 외환 수요가 늘어 환율이 올라요.",
+  },
+  {
+    text: "자국 상품의 수출이 늘었습니다.",
+    direction: "down",
+    explanation: "수출이 늘면 대금을 외환으로 받아 국내로 들어오는 외환 공급이 늘어 환율이 내려가요.",
+  },
+  {
+    text: "자국민의 해외여행·해외유학·해외투자가 늘었습니다.",
+    direction: "up",
+    explanation: "외환이 해외로 나가는 일이 늘면 외환 수요가 늘어 환율이 올라요.",
+  },
+  {
+    text: "외국인의 국내여행·국내투자·차관 도입이 늘었습니다.",
+    direction: "down",
+    explanation: "외환이 국내로 들어오는 일이 늘면 외환 공급이 늘어 환율이 내려가요.",
+  },
 ];
 
 const NEWS_HEADLINES = {
@@ -429,13 +469,9 @@ const eventQuestionEl = document.getElementById("event-question");
 const eventAnswerRowEl = document.getElementById("event-answer-row");
 const answerBtns = document.querySelectorAll(".answer-btn");
 const answerNeutralBtn = document.getElementById("answer-neutral-btn");
-const nonsenseInputBlockEl = document.getElementById("nonsense-input-block");
-const nonsenseInputEl = document.getElementById("nonsense-input");
-const nonsenseRevealBtn = document.getElementById("nonsense-reveal-btn");
-const nonsenseRevealEl = document.getElementById("nonsense-reveal");
-const nonsenseAnswerTextEl = document.getElementById("nonsense-answer-text");
-const nonsenseCorrectBtn = document.getElementById("nonsense-correct-btn");
-const nonsenseWrongBtn = document.getElementById("nonsense-wrong-btn");
+const answerBtnA = document.getElementById("answer-btn-a");
+const answerBtnB = document.getElementById("answer-btn-b");
+const nonsenseOptionsEl = document.getElementById("nonsense-options");
 
 let pendingNonsense = null;
 const eventFeedbackEl = document.getElementById("event-feedback");
@@ -589,8 +625,7 @@ function correctImpactFor(categoryIndex, direction) {
 }
 
 function showEvent(tile, unit) {
-  nonsenseInputBlockEl.classList.add("hidden");
-  nonsenseRevealEl.classList.add("hidden");
+  nonsenseOptionsEl.classList.add("hidden");
   eventNewsEl.classList.add("hidden");
 
   if (tile.isStart) {
@@ -611,7 +646,12 @@ function showEvent(tile, unit) {
     const categoryIndex = Math.floor(Math.random() * CATEGORIES.length);
     const correctImpact = correctImpactFor(categoryIndex, direction);
 
-    pendingQuiz = { unit, direction, correctImpact, categoryIndex, isIsland: true };
+    pendingQuiz = { unit, direction, correctImpact, categoryIndex, category: CATEGORIES[categoryIndex], isIsland: true, isDirectionQuiz: false };
+
+    answerBtnA.textContent = "😀 유리해요";
+    answerBtnA.dataset.impact = "advantage";
+    answerBtnB.textContent = "😟 불리해요";
+    answerBtnB.dataset.impact = "disadvantage";
 
     eventTitleEl.textContent = "🏝️ 무인도 탈출 퀴즈 (고난도)";
     eventNewsEl.classList.remove("hidden");
@@ -630,8 +670,16 @@ function showEvent(tile, unit) {
     eventQuestionEl.textContent = q.question;
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackEl.classList.add("hidden");
-    nonsenseInputEl.value = "";
-    nonsenseInputBlockEl.classList.remove("hidden");
+
+    nonsenseOptionsEl.innerHTML = "";
+    q.options.forEach((option, idx) => {
+      const btn = document.createElement("button");
+      btn.className = "answer-btn";
+      btn.textContent = option;
+      btn.addEventListener("click", () => resolveNonsense(idx === q.answerIndex));
+      nonsenseOptionsEl.appendChild(btn);
+    });
+    nonsenseOptionsEl.classList.remove("hidden");
   } else if (tile.isSpecial && tile.specialType === "card") {
     cardIsPreview = false;
     cardDrawUnit = unit;
@@ -644,22 +692,61 @@ function showEvent(tile, unit) {
     renderCardGrid();
     return;
   } else {
-    const direction = Math.random() < 0.5 ? "up" : "down";
-    const headlines = NEWS_HEADLINES[direction];
-    const news = headlines[Math.floor(Math.random() * headlines.length)];
-    const correctImpact = correctImpactFor(tile.categoryIndex, direction);
-
-    pendingQuiz = { tile, unit, direction, correctImpact, categoryIndex: tile.categoryIndex, isIsland: false };
-
-    eventTitleEl.textContent = `${tile.category} 퀴즈`;
-    eventNewsEl.classList.remove("hidden");
-    eventNewsEl.textContent = news;
-    eventQuestionEl.textContent = `이 상황에서 "${tile.category}"는 유리할까요, 불리할까요?`;
-    answerNeutralBtn.classList.add("hidden");
-    eventAnswerRowEl.classList.remove("hidden");
-    eventFeedbackEl.classList.add("hidden");
+    setupNormalQuiz(unit, tile);
   }
   eventModalEl.classList.remove("hidden");
+}
+
+// Builds either the impact-guess quiz ("이 상황에서 OO는 유리할까요, 불리할까요?")
+// or, about 1/3 of the time, the direction-guess quiz ("이 상황에서 환율은
+// 상승할까요, 하락할까요?") using only the four factors from the textbook
+// table. Shared by normal tile landings and the 더블 찬스 bonus quiz.
+function setupNormalQuiz(unit, tile) {
+  const isDirectionQuiz = Math.random() < 1 / 3;
+
+  answerNeutralBtn.classList.add("hidden");
+  eventAnswerRowEl.classList.remove("hidden");
+  eventFeedbackEl.classList.add("hidden");
+
+  if (isDirectionQuiz) {
+    const factor = DIRECTION_FACTORS[Math.floor(Math.random() * DIRECTION_FACTORS.length)];
+    pendingQuiz = {
+      unit,
+      isDirectionQuiz: true,
+      correctImpact: factor.direction,
+      explanationText: factor.explanation,
+      category: "환율 방향 예측",
+    };
+
+    answerBtnA.textContent = "📈 환율 상승";
+    answerBtnA.dataset.impact = "up";
+    answerBtnB.textContent = "📉 환율 하락";
+    answerBtnB.dataset.impact = "down";
+
+    eventTitleEl.textContent = "환율 예측 퀴즈";
+    eventNewsEl.classList.add("hidden");
+    eventQuestionEl.textContent = `${factor.text} 이 상황에서 환율은 상승할까요, 하락할까요?`;
+    return;
+  }
+
+  const categoryIndex = tile ? tile.categoryIndex : Math.floor(Math.random() * CATEGORIES.length);
+  const category = tile ? tile.category : CATEGORIES[categoryIndex];
+  const direction = Math.random() < 0.5 ? "up" : "down";
+  const headlines = NEWS_HEADLINES[direction];
+  const news = headlines[Math.floor(Math.random() * headlines.length)];
+  const correctImpact = correctImpactFor(categoryIndex, direction);
+
+  pendingQuiz = { unit, isDirectionQuiz: false, direction, correctImpact, categoryIndex, category };
+
+  answerBtnA.textContent = "😀 유리해요";
+  answerBtnA.dataset.impact = "advantage";
+  answerBtnB.textContent = "😟 불리해요";
+  answerBtnB.dataset.impact = "disadvantage";
+
+  eventTitleEl.textContent = tile ? `${category} 퀴즈` : "⚡ 더블 찬스 퀴즈";
+  eventNewsEl.classList.remove("hidden");
+  eventNewsEl.textContent = news;
+  eventQuestionEl.textContent = `이 상황에서 "${category}"는 유리할까요, 불리할까요?`;
 }
 
 answerBtns.forEach((btn) => {
@@ -667,8 +754,10 @@ answerBtns.forEach((btn) => {
     if (!pendingQuiz) return;
     const chosen = btn.dataset.impact;
     const correct = chosen === pendingQuiz.correctImpact;
-    const explanation = QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
-    const category = CATEGORIES[pendingQuiz.categoryIndex];
+    const explanation = pendingQuiz.isDirectionQuiz
+      ? pendingQuiz.explanationText
+      : QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
+    const category = pendingQuiz.category;
 
     state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
 
@@ -709,18 +798,12 @@ eventCloseBtn.addEventListener("click", () => {
   advanceTurnOrEndGame();
 });
 
-nonsenseRevealBtn.addEventListener("click", () => {
-  nonsenseInputBlockEl.classList.add("hidden");
-  nonsenseAnswerTextEl.textContent = `정답: ${pendingNonsense.question.answer}`;
-  nonsenseRevealEl.classList.remove("hidden");
-});
-
 function resolveNonsense(correct) {
   const unit = pendingNonsense.unit;
   moveUnitBy(unit, correct ? 1 : -1);
   renderBoard();
 
-  nonsenseRevealEl.classList.add("hidden");
+  nonsenseOptionsEl.classList.add("hidden");
   showFeedback(
     correct ? "정답이에요!" : "아쉬워요!",
     correct ? "1칸 전진" : "1칸 후진",
@@ -728,9 +811,6 @@ function resolveNonsense(correct) {
     correct
   );
 }
-
-nonsenseCorrectBtn.addEventListener("click", () => resolveNonsense(true));
-nonsenseWrongBtn.addEventListener("click", () => resolveNonsense(false));
 
 function moveUnitBy(unit, delta) {
   const rawPos = unit.pos + delta;
@@ -1069,21 +1149,7 @@ function applyCard(card) {
 }
 
 function triggerBonusQuiz(unit) {
-  const direction = Math.random() < 0.5 ? "up" : "down";
-  const headlines = NEWS_HEADLINES[direction];
-  const news = headlines[Math.floor(Math.random() * headlines.length)];
-  const categoryIndex = Math.floor(Math.random() * CATEGORIES.length);
-  const correctImpact = correctImpactFor(categoryIndex, direction);
-
-  pendingQuiz = { unit, direction, correctImpact, categoryIndex, isIsland: false };
-
-  eventTitleEl.textContent = "⚡ 더블 찬스 퀴즈";
-  eventNewsEl.classList.remove("hidden");
-  eventNewsEl.textContent = news;
-  eventQuestionEl.textContent = `이 상황에서 "${CATEGORY_ICONS[categoryIndex]} ${CATEGORIES[categoryIndex]}"는 유리할까요, 불리할까요?`;
-  answerNeutralBtn.classList.add("hidden");
-  eventAnswerRowEl.classList.remove("hidden");
-  eventFeedbackEl.classList.add("hidden");
+  setupNormalQuiz(unit, null);
   eventModalEl.classList.remove("hidden");
 }
 

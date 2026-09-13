@@ -211,23 +211,12 @@
       <p id="event-question"></p>
 
       <div id="event-answer-row" class="option-row hidden">
-        <button class="answer-btn" data-impact="advantage">😀 유리해요</button>
-        <button class="answer-btn" data-impact="disadvantage">😟 불리해요</button>
+        <button id="answer-btn-a" class="answer-btn" data-impact="advantage">😀 유리해요</button>
+        <button id="answer-btn-b" class="answer-btn" data-impact="disadvantage">😟 불리해요</button>
         <button id="answer-neutral-btn" class="answer-btn hidden" data-impact="none">🤷 상관없어요</button>
       </div>
 
-      <div id="nonsense-input-block" class="hidden">
-        <input id="nonsense-input" type="text" class="password-input nonsense-input" placeholder="정답을 입력해보세요" />
-        <button id="nonsense-reveal-btn" class="start-btn">정답 보기</button>
-      </div>
-
-      <div id="nonsense-reveal" class="hidden">
-        <p id="nonsense-answer-text" class="nonsense-answer-text"></p>
-        <div class="option-row">
-          <button id="nonsense-correct-btn" class="answer-btn">😀 맞았어요</button>
-          <button id="nonsense-wrong-btn" class="answer-btn">😢 틀렸어요</button>
-        </div>
-      </div>
+      <div id="nonsense-options" class="option-row hidden"></div>
 
       <div id="event-feedback" class="hidden">
         <p id="feedback-title" class="feedback-title"></p>
