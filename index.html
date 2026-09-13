@@ -127,28 +127,30 @@
 
       <aside class="panel">
         <div class="panel-block">
-          <span class="panel-label">턴</span>
-          <span id="turn-count" class="panel-value">0</span>
-        </div>
-
-        <div class="panel-block">
           <span class="panel-label">현재 차례</span>
           <span id="current-player" class="panel-value">-</span>
         </div>
 
         <div class="panel-block">
-          <span class="panel-label">현재 위치</span>
-          <span id="current-tile" class="panel-value">출발</span>
+          <span class="panel-label">현재 자산 순위</span>
+          <div id="asset-ranking" class="asset-ranking"></div>
         </div>
 
         <div class="panel-block log-block">
-          <span class="panel-label">진행 기록</span>
+          <button id="log-toggle-btn" class="log-toggle-btn">
+            <span class="panel-label">진행 기록</span>
+            <span id="log-toggle-icon" class="log-toggle-icon">▾</span>
+          </button>
           <ul id="log-list" class="log-list"></ul>
         </div>
 
         <button id="end-game-btn" class="end-game-btn">게임 종료 · 결과 보기</button>
       </aside>
     </main>
+
+    <!-- kept off-screen for internal bookkeeping only -->
+    <span id="turn-count" class="hidden">0</span>
+    <span id="current-tile" class="hidden">출발</span>
 
     <button id="roll-btn" class="roll-fab">
       <span class="roll-fab-icon">🎲</span>
@@ -226,7 +228,7 @@
     <div class="modal-content card-modal-content">
       <h2>🃏 카드뽑기</h2>
 
-      <div id="card-password-gate">
+      <div id="card-password-gate" class="hidden">
         <p>선생님, 카드뽑기를 진행하려면 비밀번호를 입력해주세요.</p>
         <input id="card-password-input" class="password-input" type="password" inputmode="numeric" placeholder="••••" maxlength="8" />
         <p id="card-password-error" class="password-error hidden">비밀번호가 올바르지 않습니다.</p>

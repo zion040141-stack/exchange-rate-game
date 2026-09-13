@@ -67,16 +67,16 @@ const NEWS_HEADLINES = {
 };
 
 const CARDS = [
-  { id: "trade", icon: "🔄", title: "맞트레이드" },
-  { id: "forward2", icon: "🚀", title: "순풍이 붑니다" },
-  { id: "back2", icon: "🌪️", title: "역풍을 맞았어요" },
-  { id: "doubleQuiz", icon: "⚡", title: "더블 찬스" },
-  { id: "skipTurn", icon: "😴", title: "방심했어요" },
-  { id: "trivia", icon: "💡", title: "오늘의 경제 상식" },
-  { id: "catchup", icon: "🎁", title: "환율 안정 지원금" },
-  { id: "fee", icon: "💸", title: "환전 수수료" },
-  { id: "rollAgain", icon: "🔁", title: "한 번 더 굴리기" },
-  { id: "interest", icon: "🏦", title: "저축 이자 수령" },
+  { id: "trade", icon: "🔄", title: "맞트레이드", desc: "원하는 팀과 자산을 맞바꿉니다. (혼자 하면 자산 ±2 랜덤)" },
+  { id: "forward2", icon: "🚀", title: "순풍이 붑니다", desc: "앞으로 2칸 이동합니다." },
+  { id: "back2", icon: "🌪️", title: "역풍을 맞았어요", desc: "뒤로 2칸 이동합니다." },
+  { id: "doubleQuiz", icon: "⚡", title: "더블 찬스", desc: "퀴즈를 한 번 더 풉니다." },
+  { id: "skipTurn", icon: "😴", title: "방심했어요", desc: "다음 턴을 쉽니다." },
+  { id: "trivia", icon: "💡", title: "오늘의 경제 상식", desc: "게임 효과는 없지만 경제 상식을 하나 얻어갑니다." },
+  { id: "catchup", icon: "🎁", title: "환율 안정 지원금", desc: "자산이 가장 낮은 팀에게 자산 +3을 지급합니다." },
+  { id: "fee", icon: "💸", title: "환전 수수료", desc: "자산이 1 줄어듭니다." },
+  { id: "rollAgain", icon: "🔁", title: "한 번 더 굴리기", desc: "주사위를 한 번 더 굴립니다." },
+  { id: "interest", icon: "🏦", title: "저축 이자 수령", desc: "자산이 1 늘어납니다." },
 ];
 
 const TRIVIA_FACTS = [
@@ -388,11 +388,19 @@ function triggerRollInvite() {
 
 const boardEl = document.getElementById("board");
 const playerBarEl = document.getElementById("player-bar");
+const assetRankingEl = document.getElementById("asset-ranking");
 const turnCountEl = document.getElementById("turn-count");
 const currentUnitEl = document.getElementById("current-player");
 const currentTileEl = document.getElementById("current-tile");
 const rollBtn = document.getElementById("roll-btn");
 const logListEl = document.getElementById("log-list");
+const logToggleBtn = document.getElementById("log-toggle-btn");
+const logToggleIcon = document.getElementById("log-toggle-icon");
+
+logToggleBtn.addEventListener("click", () => {
+  const collapsed = logListEl.classList.toggle("collapsed");
+  logToggleIcon.textContent = collapsed ? "▸" : "▾";
+});
 
 const eventModalEl = document.getElementById("event-modal");
 const eventTitleEl = document.getElementById("event-title");
@@ -432,13 +440,33 @@ function renderUnitBar() {
     nameEl.textContent = unit.name;
     info.appendChild(nameEl);
 
-    const teamEl = document.createElement("div");
-    teamEl.className = "chip-team";
-    teamEl.textContent = (unit.memberCount !== null ? `${unit.memberCount}명 · ` : "") + `자산 ${unit.score}`;
-    info.appendChild(teamEl);
+    if (unit.memberCount !== null) {
+      const teamEl = document.createElement("div");
+      teamEl.className = "chip-team";
+      teamEl.textContent = `${unit.memberCount}명`;
+      info.appendChild(teamEl);
+    }
 
     chip.appendChild(info);
     playerBarEl.appendChild(chip);
+  });
+
+  renderAssetRanking();
+}
+
+function renderAssetRanking() {
+  const ranked = [...state.units].sort((a, b) => b.score - a.score);
+  assetRankingEl.innerHTML = "";
+  ranked.forEach((unit, idx) => {
+    const row = document.createElement("div");
+    row.className = "asset-rank-row" + (unit === currentUnit() ? " active" : "");
+    row.innerHTML = `
+      <span class="asset-rank-pos">${idx + 1}</span>
+      <span class="asset-rank-icon">${unit.icon}</span>
+      <span class="asset-rank-name">${unit.name}</span>
+      <span class="asset-rank-score">${unit.score}</span>
+    `;
+    assetRankingEl.appendChild(row);
   });
 }
 
@@ -447,7 +475,11 @@ function renderBoard() {
 
   const center = document.createElement("div");
   center.className = "tile-center";
-  center.innerHTML = '<div class="center-globe">🌍</div><div class="center-label">환율 정복</div>';
+  center.innerHTML = `
+    <div class="center-globe">🌍</div>
+    <div class="center-label">환율 정복</div>
+    <div class="center-card-stack"><div class="stack-card"></div><div class="stack-card"></div><div class="stack-card"></div></div>
+  `;
   boardEl.appendChild(center);
 
   tiles.forEach((tile) => {
@@ -464,19 +496,15 @@ function renderBoard() {
     el.style.gridRow = tile.row;
     el.style.gridColumn = tile.col;
 
-    const icon = document.createElement("div");
-    icon.className = "tile-icon";
-    icon.textContent = tile.icon;
-    el.appendChild(icon);
-
-    const label = document.createElement("div");
-    label.className = "tile-label";
-    label.textContent = tile.category;
-    el.appendChild(label);
+    if (tile.specialType === "card") {
+      el.classList.add("clickable-tile");
+      el.addEventListener("click", () => openCardPreview());
+    }
 
     const occupants = state.units.filter((u) => u.pos === tile.index);
+
     if (occupants.length > 0) {
-      el.classList.add("active-player");
+      el.classList.add("active-player", "occupied");
       const tokenWrap = document.createElement("div");
       tokenWrap.className = "token-wrap";
       occupants.forEach((u) => {
@@ -486,6 +514,16 @@ function renderBoard() {
         tokenWrap.appendChild(token);
       });
       el.appendChild(tokenWrap);
+    } else {
+      const icon = document.createElement("div");
+      icon.className = "tile-icon";
+      icon.textContent = tile.icon;
+      el.appendChild(icon);
+
+      const label = document.createElement("div");
+      label.className = "tile-label";
+      label.textContent = tile.category;
+      el.appendChild(label);
     }
 
     boardEl.appendChild(el);
@@ -536,7 +574,14 @@ function showEvent(tile, unit) {
     eventAnswerRowEl.classList.remove("hidden");
     eventFeedbackEl.classList.add("hidden");
   } else if (tile.isSpecial && tile.specialType === "card") {
-    openCardModal(unit);
+    cardIsPreview = false;
+    cardDrawUnit = unit;
+    cardRollAgain = false;
+    cardPasswordGateEl.classList.add("hidden");
+    const originEl = document.querySelector(".tile.special-card");
+    cardOriginRect = originEl ? originEl.getBoundingClientRect() : null;
+    cardModalEl.classList.remove("hidden");
+    renderCardGrid();
     return;
   } else {
     const direction = Math.random() < 0.5 ? "up" : "down";
@@ -736,9 +781,14 @@ const cardCloseBtn = document.getElementById("card-close-btn");
 
 let cardDrawUnit = null;
 let cardRollAgain = false;
+let cardIsPreview = false;
+let cardOriginRect = null;
 
-function openCardModal(unit) {
-  cardDrawUnit = unit;
+function openCardPreview() {
+  if (state.animating || !cardModalEl.classList.contains("hidden")) return;
+
+  cardIsPreview = true;
+  cardDrawUnit = null;
   cardRollAgain = false;
 
   cardPasswordInput.value = "";
@@ -755,6 +805,8 @@ function checkCardPassword() {
   if (cardPasswordInput.value === TEACHER_PASSWORD) {
     cardPasswordInput.value = "";
     cardPasswordGateEl.classList.add("hidden");
+    const originEl = document.querySelector(".tile.special-card");
+    cardOriginRect = originEl ? originEl.getBoundingClientRect() : null;
     renderCardGrid();
   } else {
     cardPasswordErrorEl.classList.remove("hidden");
@@ -771,14 +823,47 @@ cardPasswordInput.addEventListener("keydown", (e) => {
 function renderCardGrid() {
   cardGridEl.innerHTML = "";
   cardGridEl.classList.remove("hidden");
+  cardTradePickerEl.classList.add("hidden");
+  cardResultEl.classList.add("hidden");
 
   const shuffled = [...CARDS].sort(() => Math.random() - 0.5);
-  shuffled.forEach((card) => {
+  const cardEls = shuffled.map((card) => {
     const btn = document.createElement("button");
     btn.className = "card-item";
     btn.innerHTML = '<div class="card-face card-back-face">🃏</div>';
     btn.addEventListener("click", () => pickCard(btn, card));
     cardGridEl.appendChild(btn);
+    return btn;
+  });
+
+  const origin = cardOriginRect;
+  cardOriginRect = null;
+  if (!origin) return;
+
+  // FLIP animation: start each card at the board tile's on-screen position,
+  // then let it transition to its real grid slot (2D translate/scale only —
+  // no rotateX/Y — to steer clear of the earlier 3D-transform text bug).
+  requestAnimationFrame(() => {
+    const deltas = cardEls.map((btn) => {
+      const rect = btn.getBoundingClientRect();
+      return {
+        dx: origin.left + origin.width / 2 - (rect.left + rect.width / 2),
+        dy: origin.top + origin.height / 2 - (rect.top + rect.height / 2),
+      };
+    });
+    cardEls.forEach((btn, i) => {
+      btn.style.transition = "none";
+      btn.style.transform = `translate(${deltas[i].dx}px, ${deltas[i].dy}px) scale(0.2)`;
+      btn.style.opacity = "0.4";
+    });
+    requestAnimationFrame(() => {
+      cardEls.forEach((btn, i) => {
+        btn.style.transition = `transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) ${i * 25}ms, opacity 0.3s ease ${i * 25}ms`;
+        btn.style.transform = "";
+        btn.style.opacity = "";
+        btn.addEventListener("transitionend", () => { btn.style.transition = ""; }, { once: true });
+      });
+    });
   });
 }
 
@@ -790,7 +875,13 @@ function pickCard(btn, card) {
   setTimeout(() => {
     btn.innerHTML = `<div class="card-face card-front-face"><span class="card-icon">${card.icon}</span><span>${card.title}</span></div>`;
     btn.classList.remove("flipping");
-    setTimeout(() => applyCard(card), 300);
+    setTimeout(() => {
+      if (cardIsPreview) {
+        showCardResult(`${card.icon} ${card.title}\n${card.desc}`);
+      } else {
+        applyCard(card);
+      }
+    }, 300);
   }, 250);
 }
 
@@ -904,6 +995,11 @@ function triggerBonusQuiz(unit) {
 
 cardCloseBtn.addEventListener("click", () => {
   cardModalEl.classList.add("hidden");
+
+  if (cardIsPreview) {
+    cardIsPreview = false;
+    return;
+  }
 
   if (cardRollAgain) {
     cardRollAgain = false;

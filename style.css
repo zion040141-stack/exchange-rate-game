@@ -8,7 +8,8 @@
   --accent-earth: #12b886;
   --accent-gradient: linear-gradient(135deg, #2f6fed, #12b886);
   --accent-soft: #eaf1ff;
-  --tile-size: 88px;
+  --tile-w: 104px;
+  --tile-h: 70px;
   --radius: 12px;
 }
 
@@ -316,11 +317,12 @@ body {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(7, var(--tile-size));
-  grid-template-rows: repeat(7, var(--tile-size));
+  grid-template-columns: repeat(7, var(--tile-w));
+  grid-template-rows: repeat(7, var(--tile-h));
   gap: 4px;
   background: radial-gradient(ellipse at center, #e7f1ff 0%, transparent 68%);
   border-radius: 14px;
+  transform: rotate(-1.5deg) skewX(-6deg);
 }
 
 .tile {
@@ -430,25 +432,48 @@ body {
   letter-spacing: 4px;
 }
 
-.token-wrap {
+.center-card-stack {
+  position: relative;
+  width: 30px;
+  height: 40px;
+  margin-top: 10px;
+}
+
+.stack-card {
   position: absolute;
-  bottom: 4px;
-  left: 0;
-  right: 0;
+  inset: 0;
+  background: var(--accent-gradient);
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.stack-card:nth-child(1) { transform: rotate(-8deg); }
+.stack-card:nth-child(2) { transform: rotate(3deg); }
+.stack-card:nth-child(3) { transform: rotate(10deg); }
+
+.clickable-tile {
+  cursor: pointer;
+}
+
+.token-wrap {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 .unit-token {
-  font-size: 16px;
+  font-size: 28px;
   line-height: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
 }
 
 .unit-token.current {
-  font-size: 20px;
+  font-size: 36px;
   animation: token-pop 0.25s ease;
 }
 
@@ -488,20 +513,81 @@ body {
 
 .log-block {
   flex: 1;
-  min-height: 140px;
+  min-height: 44px;
   max-height: 220px;
 }
 
+.log-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.log-toggle-icon {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
 .log-list {
-  margin: 0;
+  margin: 6px 0 0;
   padding: 0 0 0 16px;
   overflow-y: auto;
   font-size: 12.5px;
   color: var(--text-muted);
+  max-height: 170px;
+}
+
+.log-list.collapsed {
+  display: none;
 }
 
 .log-list li {
   margin-bottom: 6px;
+}
+
+.asset-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.asset-rank-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.asset-rank-row.active {
+  background: var(--accent-soft);
+}
+
+.asset-rank-pos {
+  width: 16px;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.asset-rank-icon {
+  font-size: 16px;
+}
+
+.asset-rank-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.asset-rank-score {
+  font-weight: 700;
+  color: var(--accent);
 }
 
 /* ---------- Roll FAB ---------- */
@@ -666,23 +752,33 @@ body {
 /* Flip is done with a 2D scaleX squash (not rotateY/3D) so Hangul
    text is never rendered inside a 3D-transformed layer. */
 
-.card-modal-content {
-  width: 480px;
-  max-width: calc(100vw - 32px);
+.modal-content.card-modal-content {
+  width: min(94vw, 960px);
+  height: min(90vh, 760px);
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-y: auto;
 }
 
 .card-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin: 16px 0 4px;
+  gap: 20px;
+  margin: 24px auto;
+  max-width: 760px;
+  width: 100%;
+  flex: 1;
+  align-content: center;
 }
 
 .card-item {
   aspect-ratio: 3 / 4;
   padding: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: transform 0.25s ease;
 }
@@ -698,32 +794,33 @@ body {
 .card-face {
   width: 100%;
   height: 100%;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px;
+  gap: 8px;
+  padding: 8px;
   text-align: center;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
 }
 
 .card-back-face {
   background: var(--accent-gradient);
   color: #fff;
-  font-size: 22px;
+  font-size: 40px;
 }
 
 .card-front-face {
   background: var(--surface);
   border: 1.5px solid var(--border);
   color: var(--text);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .card-front-face .card-icon {
-  font-size: 20px;
+  font-size: 34px;
 }
 
 #card-trade-picker p,
@@ -921,7 +1018,8 @@ body {
 
 @media (max-width: 720px) {
   :root {
-    --tile-size: 44px;
+    --tile-w: 56px;
+    --tile-h: 40px;
   }
   .layout {
     padding: 16px;
