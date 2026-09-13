@@ -353,6 +353,9 @@ body {
 .tile-cat-6 { background: #e9f7e6; border-bottom-color: #9adf8f; }
 .tile-cat-6 .tile-label { color: #2f9e44; }
 
+.tile-direction { background: #eef0ff; border-bottom-color: #aab4f0; }
+.tile-direction .tile-label { color: #3b4fd1; }
+
 .special-island { background: #e7f6f8; border-bottom-color: #74c7d4; }
 .special-island .tile-label { color: #0b7285; }
 

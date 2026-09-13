@@ -12,6 +12,8 @@ const CATEGORIES = [
 
 const CATEGORY_ICONS = ["📦", "🚢", "✈️", "🧳", "🎓", "💼", "🏠"];
 const START_ICON = "🏁";
+const DIRECTION_TILE_ICON = "🔮";
+const DIRECTION_TILE_LABEL = "환율 변동 예측";
 
 // Short, icon-friendly flavor for the quiz "team status" card — the real
 // category name (used everywhere else: tiles, report, explanations) stays
@@ -154,14 +156,53 @@ function buildPerimeterCells() {
   return cells;
 }
 
+// Every tile's quiz type is fixed to the tile itself so its board label
+// always matches what's actually asked there: about 1 in 3 non-special
+// tiles is a dedicated "환율 변동 예측" (direction) tile, and the rest are
+// "환율 변동 영향" tiles each tied to one specific economic-actor category.
 function buildTiles() {
   const cells = buildPerimeterCells();
   const cornerIndexes = [0, GRID - 1, 2 * (GRID - 1), 3 * (GRID - 1)];
+
+  const eligibleIndexes = cells
+    .map((_, index) => index)
+    .filter((index) => index !== 0 && !SPECIAL_TILES[index]);
+
+  const directionIndexSet = new Set();
+  eligibleIndexes.forEach((tileIndex, orderIndex) => {
+    if (orderIndex % 3 === 2) directionIndexSet.add(tileIndex);
+  });
+
+  let impactCounter = 0;
+
   return cells.map((cell, index) => {
     const isCorner = cornerIndexes.includes(index);
     const isStart = index === 0;
     const special = SPECIAL_TILES[index];
-    const categoryIndex = isStart || special ? -1 : (index - 1) % CATEGORIES.length;
+    const isDirectionTile = directionIndexSet.has(index);
+
+    let categoryIndex = -1;
+    if (!isStart && !special && !isDirectionTile) {
+      categoryIndex = impactCounter % CATEGORIES.length;
+      impactCounter += 1;
+    }
+
+    let category;
+    let icon;
+    if (isStart) {
+      category = "출발 / 도착";
+      icon = START_ICON;
+    } else if (special) {
+      category = special.label;
+      icon = special.icon;
+    } else if (isDirectionTile) {
+      category = DIRECTION_TILE_LABEL;
+      icon = DIRECTION_TILE_ICON;
+    } else {
+      category = CATEGORIES[categoryIndex];
+      icon = CATEGORY_ICONS[categoryIndex];
+    }
+
     return {
       index,
       row: cell.row,
@@ -170,9 +211,10 @@ function buildTiles() {
       isStart,
       isSpecial: Boolean(special),
       specialType: special ? special.type : null,
+      isDirectionTile,
       categoryIndex,
-      category: isStart ? "출발 / 도착" : special ? special.label : CATEGORIES[categoryIndex],
-      icon: isStart ? START_ICON : special ? special.icon : CATEGORY_ICONS[categoryIndex],
+      category,
+      icon,
     };
   });
 }
@@ -493,6 +535,8 @@ function renderBoard() {
       el.classList.add("start");
     } else if (tile.isSpecial) {
       el.classList.add(`special-${tile.specialType}`);
+    } else if (tile.isDirectionTile) {
+      el.classList.add("tile-direction");
     } else {
       el.classList.add(`tile-cat-${tile.categoryIndex}`);
     }
@@ -651,11 +695,12 @@ function showEvent(tile, unit) {
 }
 
 // Builds either the impact-guess quiz ("이 상황에서 OO는 유리할까요, 불리할까요?")
-// or, about 1/3 of the time, the direction-guess quiz ("이 상황에서 환율은
-// 상승할까요, 하락할까요?") using only the four factors from the textbook
-// table. Shared by normal tile landings and the 더블 찬스 bonus quiz.
+// or the direction-guess quiz ("이 상황에서 환율은 상승할까요, 하락할까요?")
+// using only the four factors from the textbook table. Which one appears is
+// fixed per-tile (tile.isDirectionTile) so the board label always matches;
+// the 더블 찬스 bonus quiz has no physical tile, so it still picks randomly.
 function setupNormalQuiz(unit, tile) {
-  const isDirectionQuiz = Math.random() < 1 / 3;
+  const isDirectionQuiz = tile ? tile.isDirectionTile : Math.random() < 1 / 3;
 
   answerNeutralBtn.classList.add("hidden");
   eventAnswerRowEl.classList.remove("hidden");
@@ -668,7 +713,7 @@ function setupNormalQuiz(unit, tile) {
       isDirectionQuiz: true,
       correctImpact: factor.direction,
       explanationText: factor.explanation,
-      category: "환율 방향 예측",
+      category: DIRECTION_TILE_LABEL,
     };
 
     answerBtnA.textContent = "📈 환율 상승";
@@ -676,7 +721,7 @@ function setupNormalQuiz(unit, tile) {
     answerBtnB.textContent = "📉 환율 하락";
     answerBtnB.dataset.impact = "down";
 
-    eventTitleEl.textContent = "환율 예측 퀴즈";
+    eventTitleEl.textContent = tile ? `${tile.category} 퀴즈` : "⚡ 더블 찬스 퀴즈";
     quizCardsRowEl.classList.remove("hidden");
     quizExampleEl.classList.add("hidden");
     quizCaptionEl.classList.add("hidden");
