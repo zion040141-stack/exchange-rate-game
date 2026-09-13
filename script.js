@@ -311,6 +311,7 @@ function buildUnits() {
         pos: 0,
         score: 0,
         distance: 0,
+        skipNextTurn: false,
       });
     }
     for (let i = 0; i < setupState.playerCount; i++) {
@@ -326,6 +327,7 @@ function buildUnits() {
         pos: 0,
         score: 0,
         distance: 0,
+        skipNextTurn: false,
       });
     }
   }
@@ -371,6 +373,7 @@ const eventNewsEl = document.getElementById("event-news");
 const eventQuestionEl = document.getElementById("event-question");
 const eventAnswerRowEl = document.getElementById("event-answer-row");
 const answerBtns = document.querySelectorAll(".answer-btn");
+const answerNeutralBtn = document.getElementById("answer-neutral-btn");
 const eventFeedbackEl = document.getElementById("event-feedback");
 const eventFeedbackTextEl = document.getElementById("event-feedback-text");
 const eventCloseBtn = document.getElementById("event-close");
@@ -490,6 +493,21 @@ function showEvent(tile, unit) {
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackTextEl.textContent = "";
     eventFeedbackEl.classList.remove("hidden");
+  } else if (tile.isSpecial && tile.specialType === "island") {
+    const direction = Math.random() < 0.5 ? "up" : "down";
+    const headlines = NEWS_HEADLINES[direction];
+    const news = headlines[Math.floor(Math.random() * headlines.length)];
+    const categoryIndex = Math.floor(Math.random() * CATEGORIES.length);
+    const correctImpact = correctImpactFor(categoryIndex, direction);
+
+    pendingQuiz = { unit, direction, correctImpact, categoryIndex, isIsland: true };
+
+    eventTitleEl.textContent = "🏝️ 무인도 탈출 퀴즈 (고난도)";
+    eventNewsEl.textContent = news;
+    eventQuestionEl.textContent = `이 상황에서 "${CATEGORY_ICONS[categoryIndex]} ${CATEGORIES[categoryIndex]}"는 유리할까요, 불리할까요, 아니면 상관없을까요?`;
+    answerNeutralBtn.classList.remove("hidden");
+    eventAnswerRowEl.classList.remove("hidden");
+    eventFeedbackEl.classList.add("hidden");
   } else if (tile.isSpecial) {
     pendingQuiz = null;
     eventTitleEl.textContent = `${tile.icon} ${tile.category}`;
@@ -504,11 +522,12 @@ function showEvent(tile, unit) {
     const news = headlines[Math.floor(Math.random() * headlines.length)];
     const correctImpact = correctImpactFor(tile.categoryIndex, direction);
 
-    pendingQuiz = { tile, unit, direction, correctImpact };
+    pendingQuiz = { tile, unit, direction, correctImpact, categoryIndex: tile.categoryIndex, isIsland: false };
 
     eventTitleEl.textContent = `${tile.category} 퀴즈`;
     eventNewsEl.textContent = news;
     eventQuestionEl.textContent = `이 상황에서 "${tile.category}"는 유리할까요, 불리할까요?`;
+    answerNeutralBtn.classList.add("hidden");
     eventAnswerRowEl.classList.remove("hidden");
     eventFeedbackEl.classList.add("hidden");
   }
@@ -520,17 +539,22 @@ answerBtns.forEach((btn) => {
     if (!pendingQuiz) return;
     const chosen = btn.dataset.impact;
     const correct = chosen === pendingQuiz.correctImpact;
-    const explanation = QUIZ_EXPLANATIONS[pendingQuiz.tile.categoryIndex][pendingQuiz.direction];
+    const explanation = QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
+    const category = CATEGORIES[pendingQuiz.categoryIndex];
 
-    pendingQuiz.unit.score += correct ? 1 : -1;
+    state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
 
-    state.quizLog.push({
-      unitName: pendingQuiz.unit.name,
-      category: pendingQuiz.tile.category,
-      correct,
-    });
+    if (pendingQuiz.isIsland) {
+      pendingQuiz.unit.score += correct ? 2 : -1;
+      if (!correct) pendingQuiz.unit.skipNextTurn = true;
+      eventFeedbackTextEl.textContent = correct
+        ? `🎉 탈출 성공! (자산 +2) ${explanation}`
+        : `🔒 탈출 실패... 다음 턴은 쉬어야 해요. (자산 -1) ${explanation}`;
+    } else {
+      pendingQuiz.unit.score += correct ? 1 : -1;
+      eventFeedbackTextEl.textContent = (correct ? "✅ 정답이에요! (자산 +1) " : "❌ 아쉬워요! (자산 -1) ") + explanation;
+    }
 
-    eventFeedbackTextEl.textContent = (correct ? "✅ 정답이에요! (자산 +1) " : "❌ 아쉬워요! (자산 -1) ") + explanation;
     eventFeedbackTextEl.className = correct ? "feedback-correct" : "feedback-wrong";
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackEl.classList.remove("hidden");
@@ -623,6 +647,19 @@ function showManualDiceModal() {
 
 rollBtn.addEventListener("click", async () => {
   if (state.animating) return;
+
+  const skippedUnit = currentUnit();
+  if (skippedUnit.skipNextTurn) {
+    skippedUnit.skipNextTurn = false;
+    state.turn += 1;
+    turnCountEl.textContent = state.turn;
+    addLog(`${state.turn}턴: ${skippedUnit.icon} ${skippedUnit.name} - 무인도에 갇혀 이번 턴을 쉽니다`);
+    state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
+    updateCurrentUnitDisplay();
+    triggerRollInvite();
+    return;
+  }
+
   state.animating = true;
   rollBtn.disabled = true;
 
