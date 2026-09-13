@@ -598,9 +598,16 @@ function showEvent(tile, unit) {
     renderDirectionCard(direction);
     const islandLabel = renderTeamCard(categoryIndex);
     eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${islandLabel}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
-    answerNeutralBtn.classList.remove("hidden");
-    eventAnswerRowEl.classList.remove("hidden");
-    eventFeedbackEl.classList.add("hidden");
+
+    if (isReviewMode) {
+      eventAnswerRowEl.classList.add("hidden");
+      const answerLabel = correctImpact === "advantage" ? "👍 유리해요!" : "👎 불리해요!";
+      showFeedback("정답 공개", answerLabel, QUIZ_EXPLANATIONS[categoryIndex][direction], true);
+    } else {
+      answerNeutralBtn.classList.remove("hidden");
+      eventAnswerRowEl.classList.remove("hidden");
+      eventFeedbackEl.classList.add("hidden");
+    }
   } else if (tile.isSpecial && tile.specialType === "nonsense") {
     pendingQuiz = null;
     const q = NONSENSE_QUESTIONS[Math.floor(Math.random() * NONSENSE_QUESTIONS.length)];
@@ -612,15 +619,20 @@ function showEvent(tile, unit) {
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackEl.classList.add("hidden");
 
-    nonsenseOptionsEl.innerHTML = "";
-    q.options.forEach((option, idx) => {
-      const btn = document.createElement("button");
-      btn.className = "answer-btn";
-      btn.textContent = option;
-      btn.addEventListener("click", () => resolveNonsense(idx === q.answerIndex));
-      nonsenseOptionsEl.appendChild(btn);
-    });
-    nonsenseOptionsEl.classList.remove("hidden");
+    if (isReviewMode) {
+      nonsenseOptionsEl.classList.add("hidden");
+      showFeedback("정답 공개", q.options[q.answerIndex], "(도착한 칸의 효과는 적용되지 않아요)", true);
+    } else {
+      nonsenseOptionsEl.innerHTML = "";
+      q.options.forEach((option, idx) => {
+        const btn = document.createElement("button");
+        btn.className = "answer-btn";
+        btn.textContent = option;
+        btn.addEventListener("click", () => resolveNonsense(idx === q.answerIndex));
+        nonsenseOptionsEl.appendChild(btn);
+      });
+      nonsenseOptionsEl.classList.remove("hidden");
+    }
   } else if (tile.isSpecial && tile.specialType === "card") {
     cardIsPreview = false;
     cardDrawUnit = unit;
@@ -673,6 +685,12 @@ function setupNormalQuiz(unit, tile) {
     quizHeadlineEl.className = "quiz-headline";
     quizSubtitleEl.textContent = "";
     eventQuestionEl.textContent = "이 상황에서 환율은 상승할까요, 하락할까요?";
+
+    if (isReviewMode) {
+      eventAnswerRowEl.classList.add("hidden");
+      const answerLabel = factor.direction === "up" ? "📈 환율 상승" : "📉 환율 하락";
+      showFeedback("정답 공개", answerLabel, factor.explanation, true);
+    }
     return;
   }
 
@@ -692,6 +710,12 @@ function setupNormalQuiz(unit, tile) {
   renderDirectionCard(direction);
   const shortLabel = renderTeamCard(categoryIndex);
   eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${shortLabel}</span>에게 유리할까요?`;
+
+  if (isReviewMode) {
+    eventAnswerRowEl.classList.add("hidden");
+    const answerLabel = correctImpact === "advantage" ? "👍 유리해요!" : "👎 불리해요!";
+    showFeedback("정답 공개", answerLabel, QUIZ_EXPLANATIONS[categoryIndex][direction], true);
+  }
 }
 
 answerBtns.forEach((btn) => {
