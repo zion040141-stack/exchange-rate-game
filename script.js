@@ -305,6 +305,8 @@ renderDiceModeButtons();
 
 // ---------------- Game state ----------------
 
+const FINISH_LAPS = 3;
+
 const state = {
   units: [],
   currentUnitIndex: 0,
@@ -312,6 +314,7 @@ const state = {
   diceMode: "app",
   animating: false,
   quizLog: [],
+  gameEndedByLaps: false,
 };
 
 let pendingQuiz = null;
@@ -332,6 +335,7 @@ function buildUnits() {
         pos: 0,
         score: 0,
         distance: 0,
+        laps: 0,
         skipNextTurn: false,
       });
     }
@@ -348,6 +352,7 @@ function buildUnits() {
         pos: 0,
         score: 0,
         distance: 0,
+        laps: 0,
         skipNextTurn: false,
       });
     }
@@ -362,6 +367,7 @@ function startGame() {
   state.diceMode = setupState.diceMode;
   state.animating = false;
   state.quizLog = [];
+  state.gameEndedByLaps = false;
 
   showScreen("game-screen");
 
@@ -578,13 +584,22 @@ answerBtns.forEach((btn) => {
   });
 });
 
-eventCloseBtn.addEventListener("click", () => {
-  eventModalEl.classList.add("hidden");
+function advanceTurnOrEndGame() {
+  if (state.gameEndedByLaps) {
+    renderReport();
+    showScreen("report-screen");
+    return;
+  }
   state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
   updateCurrentUnitDisplay();
   state.animating = false;
   rollBtn.disabled = false;
   triggerRollInvite();
+}
+
+eventCloseBtn.addEventListener("click", () => {
+  eventModalEl.classList.add("hidden");
+  advanceTurnOrEndGame();
 });
 
 function movePlayerStep(stepsLeft) {
@@ -598,6 +613,10 @@ function movePlayerStep(stepsLeft) {
   }
   unit.pos = (unit.pos + 1) % tileCount;
   unit.distance += 1;
+  if (unit.pos === 0) {
+    unit.laps += 1;
+    if (unit.laps >= FINISH_LAPS) state.gameEndedByLaps = true;
+  }
   renderBoard();
   setTimeout(() => movePlayerStep(stepsLeft - 1), 180);
 }
@@ -666,9 +685,7 @@ function skipStuckTurn(unit) {
   state.turn += 1;
   turnCountEl.textContent = state.turn;
   addLog(`${state.turn}턴: ${unit.icon} ${unit.name} - 무인도에 갇혀 이번 턴을 쉽니다`);
-  state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
-  updateCurrentUnitDisplay();
-  triggerRollInvite();
+  advanceTurnOrEndGame();
 }
 
 async function performRoll() {
@@ -706,6 +723,10 @@ rollBtn.addEventListener("click", () => {
 // ---------------- Card draw (카드뽑기) ----------------
 
 const cardModalEl = document.getElementById("card-modal");
+const cardPasswordGateEl = document.getElementById("card-password-gate");
+const cardPasswordInput = document.getElementById("card-password-input");
+const cardPasswordErrorEl = document.getElementById("card-password-error");
+const cardPasswordSubmitBtn = document.getElementById("card-password-submit");
 const cardGridEl = document.getElementById("card-grid");
 const cardTradePickerEl = document.getElementById("card-trade-picker");
 const cardTradeOptionsEl = document.getElementById("card-trade-options");
@@ -720,10 +741,36 @@ function openCardModal(unit) {
   cardDrawUnit = unit;
   cardRollAgain = false;
 
-  cardGridEl.innerHTML = "";
-  cardGridEl.classList.remove("hidden");
+  cardPasswordInput.value = "";
+  cardPasswordErrorEl.classList.add("hidden");
+  cardPasswordGateEl.classList.remove("hidden");
+  cardGridEl.classList.add("hidden");
   cardTradePickerEl.classList.add("hidden");
   cardResultEl.classList.add("hidden");
+
+  cardModalEl.classList.remove("hidden");
+}
+
+function checkCardPassword() {
+  if (cardPasswordInput.value === TEACHER_PASSWORD) {
+    cardPasswordInput.value = "";
+    cardPasswordGateEl.classList.add("hidden");
+    renderCardGrid();
+  } else {
+    cardPasswordErrorEl.classList.remove("hidden");
+    cardPasswordInput.value = "";
+    cardPasswordInput.focus();
+  }
+}
+
+cardPasswordSubmitBtn.addEventListener("click", checkCardPassword);
+cardPasswordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkCardPassword();
+});
+
+function renderCardGrid() {
+  cardGridEl.innerHTML = "";
+  cardGridEl.classList.remove("hidden");
 
   const shuffled = [...CARDS].sort(() => Math.random() - 0.5);
   shuffled.forEach((card) => {
@@ -733,8 +780,6 @@ function openCardModal(unit) {
     btn.addEventListener("click", () => pickCard(btn, card));
     cardGridEl.appendChild(btn);
   });
-
-  cardModalEl.classList.remove("hidden");
 }
 
 function pickCard(btn, card) {
@@ -871,11 +916,7 @@ cardCloseBtn.addEventListener("click", () => {
     return;
   }
 
-  state.currentUnitIndex = (state.currentUnitIndex + 1) % state.units.length;
-  updateCurrentUnitDisplay();
-  state.animating = false;
-  rollBtn.disabled = false;
-  triggerRollInvite();
+  advanceTurnOrEndGame();
 });
 
 // ---------------- Learning feedback report ----------------
