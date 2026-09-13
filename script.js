@@ -13,6 +13,13 @@ const CATEGORIES = [
 const CATEGORY_ICONS = ["📦", "🚢", "✈️", "🧳", "🎓", "💼", "🏠"];
 const START_ICON = "🏁";
 
+// Placeholder special tiles — landing here just shows a notice for now.
+// Rules (skip a turn, draw a card, etc.) are still being designed.
+const SPECIAL_TILES = {
+  6: { type: "island", label: "무인도", icon: "🏝️" },
+  18: { type: "card", label: "카드뽑기", icon: "🃏" },
+};
+
 const ANIMAL_NAMES = ["토끼", "강아지", "고양이", "호랑이", "판다", "여우", "곰", "원숭이", "코알라", "펭귄"];
 const ANIMAL_ICONS = ["🐰", "🐶", "🐱", "🐯", "🐼", "🦊", "🐻", "🐵", "🐨", "🐧"];
 const UNIT_COLORS = [
@@ -74,15 +81,19 @@ function buildTiles() {
   return cells.map((cell, index) => {
     const isCorner = cornerIndexes.includes(index);
     const isStart = index === 0;
-    const categoryIndex = isStart ? -1 : (index - 1) % CATEGORIES.length;
+    const special = SPECIAL_TILES[index];
+    const categoryIndex = isStart || special ? -1 : (index - 1) % CATEGORIES.length;
     return {
       index,
       row: cell.row,
       col: cell.col,
       isCorner,
       isStart,
+      isSpecial: Boolean(special),
+      specialType: special ? special.type : null,
       categoryIndex,
-      category: isStart ? "출발" : CATEGORIES[categoryIndex],
+      category: isStart ? "출발" : special ? special.label : CATEGORIES[categoryIndex],
+      icon: isStart ? START_ICON : special ? special.icon : CATEGORY_ICONS[categoryIndex],
     };
   });
 }
@@ -298,6 +309,8 @@ function buildUnits() {
         color: UNIT_COLORS[t % UNIT_COLORS.length],
         memberCount: 0,
         pos: 0,
+        score: 0,
+        distance: 0,
       });
     }
     for (let i = 0; i < setupState.playerCount; i++) {
@@ -311,6 +324,8 @@ function buildUnits() {
         color: UNIT_COLORS[i % UNIT_COLORS.length],
         memberCount: null,
         pos: 0,
+        score: 0,
+        distance: 0,
       });
     }
   }
@@ -387,12 +402,10 @@ function renderUnitBar() {
     nameEl.textContent = unit.name;
     info.appendChild(nameEl);
 
-    if (unit.memberCount !== null) {
-      const teamEl = document.createElement("div");
-      teamEl.className = "chip-team";
-      teamEl.textContent = `${unit.memberCount}명`;
-      info.appendChild(teamEl);
-    }
+    const teamEl = document.createElement("div");
+    teamEl.className = "chip-team";
+    teamEl.textContent = (unit.memberCount !== null ? `${unit.memberCount}명 · ` : "") + `자산 ${unit.score}`;
+    info.appendChild(teamEl);
 
     chip.appendChild(info);
     playerBarEl.appendChild(chip);
@@ -412,6 +425,8 @@ function renderBoard() {
     el.className = "tile";
     if (tile.isStart) {
       el.classList.add("start");
+    } else if (tile.isSpecial) {
+      el.classList.add(`special-${tile.specialType}`);
     } else {
       el.classList.add(`tile-cat-${tile.categoryIndex}`);
     }
@@ -421,7 +436,7 @@ function renderBoard() {
 
     const icon = document.createElement("div");
     icon.className = "tile-icon";
-    icon.textContent = tile.isStart ? START_ICON : CATEGORY_ICONS[tile.categoryIndex];
+    icon.textContent = tile.icon;
     el.appendChild(icon);
 
     const label = document.createElement("div");
@@ -475,6 +490,14 @@ function showEvent(tile, unit) {
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackTextEl.textContent = "";
     eventFeedbackEl.classList.remove("hidden");
+  } else if (tile.isSpecial) {
+    pendingQuiz = null;
+    eventTitleEl.textContent = `${tile.icon} ${tile.category}`;
+    eventNewsEl.textContent = "";
+    eventQuestionEl.textContent = `${unit.icon} ${unit.name}이(가) ${tile.category} 칸에 도착했습니다! (세부 규칙은 추후 추가될 예정이에요)`;
+    eventAnswerRowEl.classList.add("hidden");
+    eventFeedbackTextEl.textContent = "";
+    eventFeedbackEl.classList.remove("hidden");
   } else {
     const direction = Math.random() < 0.5 ? "up" : "down";
     const headlines = NEWS_HEADLINES[direction];
@@ -499,16 +522,19 @@ answerBtns.forEach((btn) => {
     const correct = chosen === pendingQuiz.correctImpact;
     const explanation = QUIZ_EXPLANATIONS[pendingQuiz.tile.categoryIndex][pendingQuiz.direction];
 
+    pendingQuiz.unit.score += correct ? 1 : -1;
+
     state.quizLog.push({
       unitName: pendingQuiz.unit.name,
       category: pendingQuiz.tile.category,
       correct,
     });
 
-    eventFeedbackTextEl.textContent = (correct ? "✅ 정답이에요! " : "❌ 아쉬워요! ") + explanation;
+    eventFeedbackTextEl.textContent = (correct ? "✅ 정답이에요! (자산 +1) " : "❌ 아쉬워요! (자산 -1) ") + explanation;
     eventFeedbackTextEl.className = correct ? "feedback-correct" : "feedback-wrong";
     eventAnswerRowEl.classList.add("hidden");
     eventFeedbackEl.classList.remove("hidden");
+    renderUnitBar();
   });
 });
 
@@ -531,6 +557,7 @@ function movePlayerStep(stepsLeft) {
     return;
   }
   unit.pos = (unit.pos + 1) % tileCount;
+  unit.distance += 1;
   renderBoard();
   setTimeout(() => movePlayerStep(stepsLeft - 1), 180);
 }
@@ -646,18 +673,33 @@ function wrongCategoriesFor(unitName) {
   return wrong;
 }
 
+// Placeholder ranking formula: asset score matters most, distance travelled
+// (a proxy for "how far/fast" a unit got) breaks ties and adds a bit of the
+// board-game luck factor. The exact weighting is still up for discussion.
+const DISTANCE_WEIGHT = 1;
+const SCORE_WEIGHT = 10;
+
+function rankScoreFor(unit) {
+  return unit.score * SCORE_WEIGHT + unit.distance * DISTANCE_WEIGHT;
+}
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
 function renderReport() {
   const unitStats = computeStatsBy((e) => e.unitName);
+  const ranked = [...state.units].sort((a, b) => rankScoreFor(b) - rankScoreFor(a));
+
   reportPlayerListEl.innerHTML = "";
-  state.units.forEach((u) => {
+  ranked.forEach((u, idx) => {
     const s = unitStats.get(u.name) || { correct: 0, total: 0 };
     const wrong = wrongCategoriesFor(u.name);
+    const rankLabel = MEDALS[idx] || `${idx + 1}위`;
     const row = document.createElement("div");
     row.className = "report-player-row";
     row.innerHTML = `
       <div class="report-player-top">
-        <span class="report-player-name">${u.icon} ${u.name}</span>
-        <span class="report-player-score">${s.correct} / ${s.total}</span>
+        <span class="report-player-name">${rankLabel} ${u.icon} ${u.name}</span>
+        <span class="report-player-score">자산 ${u.score} · 정답 ${s.correct}/${s.total} · ${u.distance}칸 이동</span>
       </div>
       ${wrong.length > 0 ? `<div class="report-player-wrong">틀린 개념: ${wrong.join(", ")}</div>` : ""}
     `;
@@ -703,6 +745,8 @@ document.getElementById("dev-preview-btn").addEventListener("click", () => {
     color: UNIT_COLORS[t],
     memberCount: 3,
     pos: 0,
+    score: 0,
+    distance: 10 + Math.floor(Math.random() * 30),
   }));
   state.units = sampleUnits;
   state.quizLog = [];
@@ -710,7 +754,9 @@ document.getElementById("dev-preview-btn").addEventListener("click", () => {
     CATEGORIES.forEach((category) => {
       const attempts = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < attempts; i++) {
-        state.quizLog.push({ unitName: u.name, category, correct: Math.random() < 0.65 });
+        const correct = Math.random() < 0.65;
+        u.score += correct ? 1 : -1;
+        state.quizLog.push({ unitName: u.name, category, correct });
       }
     });
   });

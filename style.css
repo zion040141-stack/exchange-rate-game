@@ -390,6 +390,12 @@ body {
 .tile-cat-6 { background: #e9f7e6; border-bottom-color: #9adf8f; }
 .tile-cat-6 .tile-label { color: #2f9e44; }
 
+.special-island { background: #e7f6f8; border-bottom-color: #74c7d4; }
+.special-island .tile-label { color: #0b7285; }
+
+.special-card { background: #f1f0ff; border-bottom-color: #b3a9f7; }
+.special-card .tile-label { color: #5f3dc4; }
+
 .tile.active-player {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -439,11 +445,11 @@ body {
   font-size: 16px;
   line-height: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-  animation: token-pop 0.25s ease;
 }
 
 .unit-token.current {
   font-size: 20px;
+  animation: token-pop 0.25s ease;
 }
 
 @keyframes token-pop {
@@ -806,7 +812,9 @@ body {
 
 .report-player-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 4px 10px;
 }
 
 .report-player-name {
@@ -815,6 +823,7 @@ body {
 
 .report-player-score {
   font-weight: 700;
+  font-size: 12px;
   color: var(--accent);
 }
 
@@ -822,6 +831,12 @@ body {
   margin-top: 4px;
   font-size: 11.5px;
   color: #e03131;
+}
+
+.report-note {
+  margin: 8px 2px 0;
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .report-weak-list {
