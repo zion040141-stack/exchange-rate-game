@@ -22,6 +22,43 @@ const TEAM_COLORS = [
 
 const TEACHER_PASSWORD = "4034";
 
+// Whether each category is "advantage" or "disadvantage" when the exchange rate RISES.
+// When the rate falls, the impact is the opposite.
+const QUIZ_IMPACT_WHEN_UP = [
+  "disadvantage", // 수입업자: 원화를 외화로 바꿔 결제 → 상승 시 더 많은 원화 필요
+  "advantage",    // 수출업자: 번 외화를 원화로 환전 → 상승 시 더 많은 원화 수령
+  "advantage",    // 외국인 여행객: 자국 통화를 원화로 환전 → 상승 시 더 많은 원화 수령
+  "disadvantage", // 내국인의 해외여행: 원화를 외화로 환전 → 상승 시 더 많은 원화 필요
+  "disadvantage", // 내국인의 해외 유학(노동): 원화를 외화로 환전 → 상승 시 더 많은 원화 필요
+  "disadvantage", // 외국인의 국내 유행(노동): 번 원화를 본국 통화로 환전 → 상승 시 더 적은 외화 수령
+  "disadvantage", // 가계의 생활비: 수입 물가 상승 → 생활비 부담 증가
+];
+
+const QUIZ_EXPLANATIONS = [
+  { up: "환율이 오르면 수입업자는 물건을 살 때 원화를 더 많이 내야 해서 불리해요.", down: "환율이 내리면 수입업자는 물건을 살 때 원화를 더 적게 내도 되어 유리해요." },
+  { up: "환율이 오르면 수출업자는 번 외화를 원화로 바꿀 때 더 많이 받을 수 있어 유리해요.", down: "환율이 내리면 수출업자는 번 외화를 원화로 바꿀 때 더 적게 받게 되어 불리해요." },
+  { up: "환율이 오르면 외국인은 자국 돈을 원화로 바꿀 때 더 많이 받아 한국 여행이 저렴해지므로 유리해요.", down: "환율이 내리면 외국인은 원화를 더 적게 받게 되어 여행 비용 부담이 늘어 불리해요." },
+  { up: "환율이 오르면 해외에서 쓸 돈을 마련하는 데 원화가 더 많이 필요해 불리해요.", down: "환율이 내리면 해외에서 쓸 돈을 더 적은 원화로 마련할 수 있어 유리해요." },
+  { up: "환율이 오르면 유학비·생활비 부담이 커져 불리해요.", down: "환율이 내리면 유학비·생활비 부담이 줄어 유리해요." },
+  { up: "환율이 오르면 국내에서 번 돈을 본국 돈으로 바꿀 때 더 적게 받아 불리해요.", down: "환율이 내리면 국내에서 번 돈을 본국 돈으로 바꿀 때 더 많이 받아 유리해요." },
+  { up: "환율이 오르면 수입 물가가 올라 생활비 부담이 커져 불리해요.", down: "환율이 내리면 수입 물가가 내려 생활비 부담이 줄어 유리해요." },
+];
+
+const NEWS_HEADLINES = {
+  up: [
+    "📰 미국이 기준금리를 인상하면서 달러가 강세를 보여 환율이 올랐습니다!",
+    "📰 국제 유가가 급등하면서 원화 가치가 떨어져 환율이 올랐습니다!",
+    "📰 우리나라 무역수지 적자가 커졌다는 소식에 환율이 올랐습니다!",
+    "📰 외국인 투자자들이 국내 주식을 대거 팔아치우며 환율이 올랐습니다!",
+  ],
+  down: [
+    "📰 우리나라 수출이 크게 늘었다는 소식에 환율이 내렸습니다!",
+    "📰 미국이 기준금리를 인하할 거라는 기대감에 환율이 내렸습니다!",
+    "📰 외국인 투자자들이 국내 주식을 대거 사들이며 환율이 내렸습니다!",
+    "📰 국제 원자재 가격이 안정되면서 환율이 내렸습니다!",
+  ],
+};
+
 function buildPerimeterCells() {
   const cells = [];
   for (let col = 1; col <= GRID; col++) cells.push({ row: 1, col });
@@ -242,7 +279,10 @@ const state = {
   turn: 0,
   diceMode: "app",
   animating: false,
+  quizLog: [],
 };
+
+let pendingQuiz = null;
 
 function currentPlayer() {
   return state.players[state.currentPlayerIndex];
@@ -265,6 +305,7 @@ function startGame() {
   state.turn = 0;
   state.diceMode = setupState.diceMode;
   state.animating = false;
+  state.quizLog = [];
 
   showScreen("game-screen");
 
@@ -293,7 +334,12 @@ const logListEl = document.getElementById("log-list");
 
 const eventModalEl = document.getElementById("event-modal");
 const eventTitleEl = document.getElementById("event-title");
-const eventBodyEl = document.getElementById("event-body");
+const eventNewsEl = document.getElementById("event-news");
+const eventQuestionEl = document.getElementById("event-question");
+const eventAnswerRowEl = document.getElementById("event-answer-row");
+const answerBtns = document.querySelectorAll(".answer-btn");
+const eventFeedbackEl = document.getElementById("event-feedback");
+const eventFeedbackTextEl = document.getElementById("event-feedback-text");
 const eventCloseBtn = document.getElementById("event-close");
 
 const diceOverlayEl = document.getElementById("dice-overlay");
@@ -409,17 +455,58 @@ function updateCurrentPlayerDisplay() {
   renderPlayerBar();
 }
 
+function correctImpactFor(categoryIndex, direction) {
+  const baseUp = QUIZ_IMPACT_WHEN_UP[categoryIndex];
+  if (direction === "up") return baseUp;
+  return baseUp === "advantage" ? "disadvantage" : "advantage";
+}
+
 function showEvent(tile, player) {
   if (tile.isStart) {
-    eventTitleEl.textContent = "출발";
-    eventBodyEl.textContent = `${player.name}이(가) 출발점을 지나 다시 게임을 이어갑니다.`;
+    pendingQuiz = null;
+    eventTitleEl.textContent = "🏁 출발점 통과";
+    eventNewsEl.textContent = "";
+    eventQuestionEl.textContent = `${player.name}이(가) 출발점을 지나 다시 게임을 이어갑니다.`;
+    eventAnswerRowEl.classList.add("hidden");
+    eventFeedbackTextEl.textContent = "";
+    eventFeedbackEl.classList.remove("hidden");
   } else {
-    const direction = Math.random() < 0.5 ? "상승" : "하강";
-    eventTitleEl.textContent = `${tile.category} 이벤트`;
-    eventBodyEl.textContent = `${player.name}의 턴 - 환율이 ${direction}하는 상황입니다. (상세 이벤트 내용은 추후 추가 예정)`;
+    const direction = Math.random() < 0.5 ? "up" : "down";
+    const headlines = NEWS_HEADLINES[direction];
+    const news = headlines[Math.floor(Math.random() * headlines.length)];
+    const correctImpact = correctImpactFor(tile.categoryIndex, direction);
+
+    pendingQuiz = { tile, player, direction, correctImpact };
+
+    eventTitleEl.textContent = `${tile.category} 퀴즈`;
+    eventNewsEl.textContent = news;
+    eventQuestionEl.textContent = `이 상황에서 "${tile.category}"는 유리할까요, 불리할까요?`;
+    eventAnswerRowEl.classList.remove("hidden");
+    eventFeedbackEl.classList.add("hidden");
   }
   eventModalEl.classList.remove("hidden");
 }
+
+answerBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (!pendingQuiz) return;
+    const chosen = btn.dataset.impact;
+    const correct = chosen === pendingQuiz.correctImpact;
+    const explanation = QUIZ_EXPLANATIONS[pendingQuiz.tile.categoryIndex][pendingQuiz.direction];
+
+    state.quizLog.push({
+      playerName: pendingQuiz.player.name,
+      team: pendingQuiz.player.team,
+      category: pendingQuiz.tile.category,
+      correct,
+    });
+
+    eventFeedbackTextEl.textContent = (correct ? "✅ 정답이에요! " : "❌ 아쉬워요! ") + explanation;
+    eventFeedbackTextEl.className = correct ? "feedback-correct" : "feedback-wrong";
+    eventAnswerRowEl.classList.add("hidden");
+    eventFeedbackEl.classList.remove("hidden");
+  });
+});
 
 eventCloseBtn.addEventListener("click", () => {
   eventModalEl.classList.add("hidden");
@@ -524,4 +611,84 @@ rollBtn.addEventListener("click", async () => {
   state.turn += 1;
   turnCountEl.textContent = state.turn;
   movePlayerStep(result);
+});
+
+// ---------------- Learning feedback report ----------------
+
+const reportPlayerListEl = document.getElementById("report-player-list");
+const reportWeakCategoriesEl = document.getElementById("report-weak-categories");
+
+function computeStatsBy(keyFn) {
+  const stats = new Map();
+  state.quizLog.forEach((entry) => {
+    const key = keyFn(entry);
+    if (!stats.has(key)) stats.set(key, { correct: 0, total: 0 });
+    const s = stats.get(key);
+    s.total += 1;
+    if (entry.correct) s.correct += 1;
+  });
+  return stats;
+}
+
+function renderReport() {
+  const playerStats = computeStatsBy((e) => e.playerName);
+  reportPlayerListEl.innerHTML = "";
+  state.players.forEach((p) => {
+    const s = playerStats.get(p.name) || { correct: 0, total: 0 };
+    const row = document.createElement("div");
+    row.className = "report-player-row";
+    row.innerHTML = `<span class="report-player-name">${p.name}</span><span class="report-player-score">${s.correct} / ${s.total}</span>`;
+    reportPlayerListEl.appendChild(row);
+  });
+
+  const categoryStats = computeStatsBy((e) => e.category);
+  const weak = [...categoryStats.entries()]
+    .map(([category, s]) => ({ category, wrong: s.total - s.correct, total: s.total }))
+    .filter((c) => c.wrong > 0)
+    .sort((a, b) => b.wrong - a.wrong)
+    .slice(0, 3);
+
+  reportWeakCategoriesEl.innerHTML = "";
+  if (weak.length === 0) {
+    const li = document.createElement("li");
+    li.textContent = "틀린 문제가 없습니다. 완벽해요! 🎉";
+    reportWeakCategoriesEl.appendChild(li);
+  } else {
+    weak.forEach((w) => {
+      const li = document.createElement("li");
+      li.textContent = `${w.category} — ${w.total}문제 중 ${w.wrong}번 오답`;
+      reportWeakCategoriesEl.appendChild(li);
+    });
+  }
+}
+
+document.getElementById("end-game-btn").addEventListener("click", () => {
+  renderReport();
+  showScreen("report-screen");
+});
+
+document.getElementById("report-restart-btn").addEventListener("click", () => {
+  showScreen("role-screen");
+});
+
+// ---------------- Developer preview (sample report data) ----------------
+
+document.getElementById("dev-preview-btn").addEventListener("click", () => {
+  const samplePlayers = [
+    { name: "플레이어 1", team: null, pos: 0, color: PLAYER_COLORS[0] },
+    { name: "플레이어 2", team: null, pos: 0, color: PLAYER_COLORS[1] },
+    { name: "플레이어 3", team: null, pos: 0, color: PLAYER_COLORS[2] },
+  ];
+  state.players = samplePlayers;
+  state.quizLog = [];
+  samplePlayers.forEach((p) => {
+    CATEGORIES.forEach((category) => {
+      const attempts = 1 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < attempts; i++) {
+        state.quizLog.push({ playerName: p.name, team: null, category, correct: Math.random() < 0.65 });
+      }
+    });
+  });
+  renderReport();
+  showScreen("report-screen");
 });

@@ -25,6 +25,8 @@
           <span>학생</span>
         </button>
       </div>
+
+      <button id="dev-preview-btn" class="dev-link-btn">🛠 개발자: 리포트 화면 미리보기</button>
     </div>
   </div>
 
@@ -143,6 +145,8 @@
           <span class="panel-label">진행 기록</span>
           <ul id="log-list" class="log-list"></ul>
         </div>
+
+        <button id="end-game-btn" class="end-game-btn">게임 종료 · 결과 보기</button>
       </aside>
     </main>
 
@@ -150,6 +154,26 @@
       <span class="roll-fab-icon">🎲</span>
       <span class="roll-fab-text">주사위 굴리기</span>
     </button>
+  </div>
+
+  <!-- 학습 피드백 리포트 화면 -->
+  <div id="report-screen" class="setup-screen app-screen hidden">
+    <div class="setup-card report-card">
+      <h1 class="setup-title">📊 학습 피드백 리포트</h1>
+      <p class="setup-subtitle">게임 결과를 확인해보세요.</p>
+
+      <div class="setup-section">
+        <span class="setup-label">플레이어별 점수</span>
+        <div id="report-player-list" class="report-player-list"></div>
+      </div>
+
+      <div class="setup-section">
+        <span class="setup-label">가장 많이 틀린 개념 TOP 3</span>
+        <ul id="report-weak-categories" class="report-weak-list"></ul>
+      </div>
+
+      <button id="report-restart-btn" class="start-btn">처음으로</button>
+    </div>
   </div>
 
   <!-- 3D 주사위 애니메이션 오버레이 -->
@@ -176,12 +200,22 @@
     </div>
   </div>
 
-  <!-- 이벤트 모달 -->
+  <!-- 이벤트 모달 (환율 뉴스 퀴즈) -->
   <div id="event-modal" class="modal hidden">
     <div class="modal-content">
       <h2 id="event-title">이벤트</h2>
-      <p id="event-body"></p>
-      <button id="event-close" class="modal-close-btn">확인</button>
+      <p id="event-news" class="event-news"></p>
+      <p id="event-question"></p>
+
+      <div id="event-answer-row" class="option-row hidden">
+        <button class="answer-btn" data-impact="advantage">😀 유리해요</button>
+        <button class="answer-btn" data-impact="disadvantage">😟 불리해요</button>
+      </div>
+
+      <div id="event-feedback" class="hidden">
+        <p id="event-feedback-text"></p>
+        <button id="event-close" class="modal-close-btn">다음</button>
+      </div>
     </div>
   </div>
 

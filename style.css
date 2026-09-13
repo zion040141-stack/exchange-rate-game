@@ -701,13 +701,124 @@ body {
 
 .modal-close-btn {
   border: none;
-  background: var(--accent);
+  background: var(--accent-gradient);
   color: #fff;
   padding: 10px 24px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.event-news {
+  background: var(--accent-soft);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: left;
+  line-height: 1.4;
+}
+
+.answer-btn {
+  flex: 1;
+  min-width: 110px;
+  padding: 14px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.answer-btn:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+#event-feedback p {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.feedback-correct {
+  color: #2f9e44;
+}
+
+.feedback-wrong {
+  color: #e03131;
+}
+
+/* ---------- End-game / dev / report ---------- */
+
+.end-game-btn {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  align-self: center;
+}
+
+.dev-link-btn {
+  display: block;
+  margin: 20px auto 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 11.5px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.dev-link-btn:hover {
+  opacity: 1;
+}
+
+.report-card {
+  max-width: 480px;
+}
+
+.report-player-list {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.report-player-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-player-row:last-child {
+  border-bottom: none;
+}
+
+.report-player-name {
+  font-weight: 600;
+}
+
+.report-player-score {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.report-weak-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
 }
 
 @media (max-width: 720px) {
