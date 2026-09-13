@@ -10,9 +10,17 @@ const CATEGORIES = [
   "가계의 생활비",
 ];
 
+const CATEGORY_ICONS = ["📦", "🚢", "✈️", "🧳", "🎓", "💼", "🏠"];
+const START_ICON = "🏁";
+
 const PLAYER_COLORS = ["#2f6fed", "#ef5350", "#0f9488", "#ab47bc"];
-const TEAM_LABELS = ["A", "B", "C"];
-const TEAM_COLORS = ["#2f6fed", "#ef5350", "#0f9488"];
+const TEAM_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+const TEAM_COLORS = [
+  "#2f6fed", "#ef5350", "#0f9488", "#ab47bc", "#f0932b",
+  "#20bf6b", "#eb3b5a", "#4b6584", "#a55eea", "#0fb9b1",
+];
+
+const TEACHER_PASSWORD = "4034";
 
 function buildPerimeterCells() {
   const cells = [];
@@ -47,7 +55,99 @@ const tileCount = tiles.length;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// ---------------- Setup screen ----------------
+// ---------------- Screen navigation ----------------
+
+function showScreen(id) {
+  document.querySelectorAll(".app-screen").forEach((el) => el.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+
+document.querySelectorAll(".back-btn").forEach((btn) => {
+  btn.addEventListener("click", () => showScreen(btn.dataset.back));
+});
+
+// ---------------- Role screen ----------------
+
+document.getElementById("role-teacher-btn").addEventListener("click", () => {
+  showScreen("teacher-password-screen");
+  document.getElementById("teacher-password-input").focus();
+});
+
+document.getElementById("role-student-btn").addEventListener("click", () => {
+  showScreen("student-setup-screen");
+});
+
+// ---------------- Teacher password screen ----------------
+
+const teacherPasswordInput = document.getElementById("teacher-password-input");
+const passwordErrorEl = document.getElementById("password-error");
+
+function checkTeacherPassword() {
+  if (teacherPasswordInput.value === TEACHER_PASSWORD) {
+    passwordErrorEl.classList.add("hidden");
+    teacherPasswordInput.value = "";
+    showScreen("teacher-setup-screen");
+  } else {
+    passwordErrorEl.classList.remove("hidden");
+    teacherPasswordInput.value = "";
+    teacherPasswordInput.focus();
+  }
+}
+
+document.getElementById("teacher-password-submit").addEventListener("click", checkTeacherPassword);
+teacherPasswordInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkTeacherPassword();
+});
+
+// ---------------- Teacher setup screen ----------------
+
+const teacherPlayerCountSelect = document.getElementById("teacher-player-count");
+const teacherTeamCountSelect = document.getElementById("teacher-team-count");
+const teacherDiceModeBtns = document.querySelectorAll("#teacher-dice-mode-row .option-btn");
+let teacherDiceMode = "app";
+
+for (let n = 2; n <= 25; n++) {
+  const opt = document.createElement("option");
+  opt.value = n;
+  opt.textContent = `${n}명`;
+  teacherPlayerCountSelect.appendChild(opt);
+}
+teacherPlayerCountSelect.value = 10;
+
+function renderTeacherTeamCountOptions() {
+  const playerCount = Number(teacherPlayerCountSelect.value);
+  const max = Math.min(playerCount - 1, TEAM_LABELS.length);
+  const prevValue = teacherTeamCountSelect.value;
+  teacherTeamCountSelect.innerHTML = "";
+  for (let t = 2; t <= max; t++) {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = `${t}팀`;
+    teacherTeamCountSelect.appendChild(opt);
+  }
+  if (prevValue && Number(prevValue) <= max) teacherTeamCountSelect.value = prevValue;
+}
+
+teacherPlayerCountSelect.addEventListener("change", renderTeacherTeamCountOptions);
+renderTeacherTeamCountOptions();
+
+teacherDiceModeBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    teacherDiceMode = btn.dataset.mode;
+    teacherDiceModeBtns.forEach((b) => b.classList.toggle("active", b === btn));
+  });
+});
+teacherDiceModeBtns[0].classList.add("active");
+
+document.getElementById("teacher-start-btn").addEventListener("click", () => {
+  setupState.playerCount = Number(teacherPlayerCountSelect.value);
+  setupState.teamMode = "team";
+  setupState.teamCount = Number(teacherTeamCountSelect.value);
+  setupState.diceMode = teacherDiceMode;
+  startGame();
+});
+
+// ---------------- Student setup screen ----------------
 
 const setupState = {
   playerCount: 1,
@@ -56,8 +156,6 @@ const setupState = {
   diceMode: "app",
 };
 
-const setupScreenEl = document.getElementById("setup-screen");
-const gameScreenEl = document.getElementById("game-screen");
 const playerCountBtns = document.querySelectorAll("#player-count-row .option-btn");
 const teamModeBtns = document.querySelectorAll("#team-mode-row .option-btn");
 const teamCountRowEl = document.getElementById("team-count-row");
@@ -153,10 +251,11 @@ function currentPlayer() {
 function startGame() {
   const players = [];
   for (let i = 0; i < setupState.playerCount; i++) {
+    const team = setupState.teamMode === "team" ? i % setupState.teamCount : null;
     players.push({
       name: `플레이어 ${i + 1}`,
-      color: PLAYER_COLORS[i % PLAYER_COLORS.length],
-      team: setupState.teamMode === "team" ? i % setupState.teamCount : null,
+      color: team !== null ? TEAM_COLORS[team % TEAM_COLORS.length] : PLAYER_COLORS[i % PLAYER_COLORS.length],
+      team,
       pos: 0,
     });
   }
@@ -167,13 +266,19 @@ function startGame() {
   state.diceMode = setupState.diceMode;
   state.animating = false;
 
-  setupScreenEl.classList.add("hidden");
-  gameScreenEl.classList.remove("hidden");
+  showScreen("game-screen");
 
   turnCountEl.textContent = state.turn;
   renderPlayerBar();
   renderBoard();
   updateCurrentPlayerDisplay();
+  triggerRollInvite();
+}
+
+function triggerRollInvite() {
+  rollBtn.classList.remove("invite");
+  void rollBtn.offsetWidth;
+  rollBtn.classList.add("invite");
 }
 
 // ---------------- Game screen elements ----------------
@@ -236,7 +341,7 @@ function renderBoard() {
 
   const center = document.createElement("div");
   center.className = "tile-center";
-  center.textContent = "환율 정복";
+  center.innerHTML = '<div class="center-globe">🌍</div><div class="center-label">환율 정복</div>';
   boardEl.appendChild(center);
 
   tiles.forEach((tile) => {
@@ -251,6 +356,11 @@ function renderBoard() {
     el.style.gridRow = tile.row;
     el.style.gridColumn = tile.col;
 
+    const icon = document.createElement("div");
+    icon.className = "tile-icon";
+    icon.textContent = tile.isStart ? START_ICON : CATEGORY_ICONS[tile.categoryIndex];
+    el.appendChild(icon);
+
     const label = document.createElement("div");
     label.className = "tile-label";
     label.textContent = tile.category;
@@ -259,11 +369,23 @@ function renderBoard() {
     const occupants = state.players.filter((p) => p.pos === tile.index);
     if (occupants.length > 0) {
       el.classList.add("active-player");
+      const isTeamMode = occupants[0].team !== null;
+      const shown = [];
+      const seenTeams = new Set();
+      occupants.forEach((p) => {
+        if (isTeamMode) {
+          if (seenTeams.has(p.team)) return;
+          seenTeams.add(p.team);
+        }
+        shown.push(p);
+      });
+
       const tokenWrap = document.createElement("div");
       tokenWrap.className = "token-wrap";
-      occupants.forEach((p) => {
+      shown.forEach((p) => {
+        const isCurrentGroup = isTeamMode ? p.team === currentPlayer().team : p === currentPlayer();
         const token = document.createElement("div");
-        token.className = "player-token" + (p === currentPlayer() ? " current" : "");
+        token.className = "player-token" + (isCurrentGroup ? " current" : "");
         token.style.background = p.color;
         tokenWrap.appendChild(token);
       });
@@ -305,6 +427,7 @@ eventCloseBtn.addEventListener("click", () => {
   updateCurrentPlayerDisplay();
   state.animating = false;
   rollBtn.disabled = false;
+  triggerRollInvite();
 });
 
 function movePlayerStep(stepsLeft) {

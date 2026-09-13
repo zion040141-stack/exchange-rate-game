@@ -8,9 +8,73 @@
 </head>
 <body>
 
-  <!-- 시작 설정 화면 -->
-  <div id="setup-screen" class="setup-screen">
+  <!-- 역할 선택 화면 -->
+  <div id="role-screen" class="setup-screen app-screen">
     <div class="setup-card">
+      <div class="globe-badge">🌍</div>
+      <h1 class="setup-title">환율 변동 정복하기</h1>
+      <p class="setup-subtitle">보드게임으로 배우는 환율 변동</p>
+
+      <div class="role-btn-row">
+        <button id="role-teacher-btn" class="role-btn">
+          <span class="role-btn-icon">🧑‍🏫</span>
+          <span>교사</span>
+        </button>
+        <button id="role-student-btn" class="role-btn">
+          <span class="role-btn-icon">🧑‍🎓</span>
+          <span>학생</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 교사 비밀번호 화면 -->
+  <div id="teacher-password-screen" class="setup-screen app-screen hidden">
+    <div class="setup-card">
+      <button class="back-btn" data-back="role-screen">← 뒤로</button>
+      <h1 class="setup-title">교사 인증</h1>
+      <p class="setup-subtitle">비밀번호를 입력하세요.</p>
+
+      <input id="teacher-password-input" class="password-input" type="password" inputmode="numeric" placeholder="••••" maxlength="8" />
+      <p id="password-error" class="password-error hidden">비밀번호가 올바르지 않습니다.</p>
+
+      <button id="teacher-password-submit" class="start-btn">확인</button>
+    </div>
+  </div>
+
+  <!-- 교사 설정 화면 -->
+  <div id="teacher-setup-screen" class="setup-screen app-screen hidden">
+    <div class="setup-card">
+      <button class="back-btn" data-back="role-screen">← 뒤로</button>
+      <h1 class="setup-title">교사용 설정</h1>
+      <p class="setup-subtitle">학급 전체 진행을 위한 설정입니다.</p>
+
+      <div class="setup-section">
+        <span class="setup-label">인원수 (최대 25명)</span>
+        <select id="teacher-player-count" class="dropdown"></select>
+      </div>
+
+      <div class="setup-section">
+        <span class="setup-label">팀 수 (팀전으로만 진행)</span>
+        <select id="teacher-team-count" class="dropdown"></select>
+      </div>
+
+      <div class="setup-section">
+        <span class="setup-label">주사위 방식</span>
+        <div class="option-row" id="teacher-dice-mode-row">
+          <button class="option-btn" data-mode="app">사이트에서 굴리기</button>
+          <button class="option-btn" data-mode="manual">실제 주사위 사용</button>
+        </div>
+      </div>
+
+      <button id="teacher-start-btn" class="start-btn">게임 시작</button>
+    </div>
+  </div>
+
+  <!-- 학생 설정 화면 -->
+  <div id="student-setup-screen" class="setup-screen app-screen hidden">
+    <div class="setup-card">
+      <button class="back-btn" data-back="role-screen">← 뒤로</button>
       <h1 class="setup-title">환율 변동 정복하기</h1>
       <p class="setup-subtitle">보드게임으로 배우는 환율 변동</p>
 
@@ -46,9 +110,9 @@
   </div>
 
   <!-- 게임 화면 -->
-  <div id="game-screen" class="game-screen hidden">
+  <div id="game-screen" class="game-screen app-screen hidden">
     <header class="app-header">
-      <h1>환율 변동 정복하기</h1>
+      <h1><span class="header-globe">🌍</span> 환율 변동 정복하기</h1>
       <div id="player-bar" class="player-bar"></div>
     </header>
 
