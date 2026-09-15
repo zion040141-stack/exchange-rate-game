@@ -8,8 +8,8 @@
   --accent-earth: #12b886;
   --accent-gradient: linear-gradient(135deg, #2f6fed, #12b886);
   --accent-soft: #eaf1ff;
-  --tile-w: 104px;
-  --tile-h: 70px;
+  --tile-w: clamp(104px, min(9.5vw, 12vh), 156px);
+  --tile-h: clamp(70px, min(6.3vw, 8vh), 106px);
   --radius: 12px;
 }
 
@@ -175,7 +175,7 @@ body {
 /* ---------- Game screen ---------- */
 
 .game-screen {
-  padding-bottom: 110px;
+  padding-bottom: 130px;
 }
 
 .app-header {
@@ -313,7 +313,7 @@ body {
   justify-content: center;
   padding: 4px;
   text-align: center;
-  font-size: 13.5px;
+  font-size: calc(var(--tile-w) * 0.115);
   line-height: 1.25;
   color: var(--text-muted);
   box-shadow: 0 2px 4px rgba(20, 30, 60, 0.05);
@@ -321,7 +321,7 @@ body {
 }
 
 .tile-icon {
-  font-size: 22px;
+  font-size: calc(var(--tile-w) * 0.19);
   line-height: 1;
   margin-bottom: 2px;
 }
@@ -329,10 +329,12 @@ body {
 .tile-label {
   font-weight: 700;
   color: var(--text);
+  white-space: pre-line;
+  word-break: keep-all;
 }
 
 .tile.corner .tile-label {
-  font-size: 14.5px;
+  font-size: calc(var(--tile-w) * 0.125);
 }
 
 .tile.corner {
@@ -408,25 +410,16 @@ body {
   font-size: calc(var(--tile-w) * 2.1);
   line-height: 1;
   animation: spin-globe 14s linear infinite;
-  opacity: 0.65;
-}
-
-.center-label {
-  position: relative;
-  color: #4f6a94;
-  background: rgba(255, 255, 255, 0.55);
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 4px;
+  opacity: 0.35;
+  filter: blur(2px);
 }
 
 .center-card-stack {
-  position: relative;
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
   width: 30px;
   height: 40px;
-  margin-top: 10px;
 }
 
 .stack-card {
@@ -592,34 +585,31 @@ body {
 .roll-fab {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: 20px;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   border: none;
   border-radius: 999px;
   background: var(--accent-gradient);
   color: #fff;
-  padding: 16px 30px;
-  font-size: 17px;
+  padding: 18px 34px;
+  font-size: 19px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(47, 111, 237, 0.35);
   z-index: 20;
+  animation: fab-bounce 1.3s ease-in-out infinite;
 }
 
-.roll-fab.invite {
-  animation: fab-pulse 0.5s ease-in-out 2;
-}
-
-@keyframes fab-pulse {
-  0%, 100% { transform: translateX(-50%) scale(1); }
-  50% { transform: translateX(-50%) scale(1.04); }
+@keyframes fab-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-8px); }
 }
 
 .roll-fab-icon {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .roll-fab:disabled {
@@ -1157,6 +1147,67 @@ body {
   max-width: 480px;
 }
 
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 22px;
+}
+
+.podium-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100px;
+}
+
+.podium-empty {
+  visibility: hidden;
+}
+
+.podium-medal {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.podium-avatar {
+  font-size: 30px;
+  margin: 4px 0 2px;
+}
+
+.podium-name {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.podium-score {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.podium-bar {
+  width: 100%;
+  border-radius: 8px 8px 0 0;
+}
+
+.podium-place-1 .podium-bar {
+  height: 92px;
+  background: linear-gradient(180deg, #ffe066, #f5b400);
+}
+
+.podium-place-2 .podium-bar {
+  height: 66px;
+  background: linear-gradient(180deg, #dee2e6, #adb5bd);
+}
+
+.podium-place-3 .podium-bar {
+  height: 46px;
+  background: linear-gradient(180deg, #f3c7a4, #d98a5f);
+}
+
 .report-player-list {
   max-height: 240px;
   overflow-y: auto;
@@ -1281,6 +1332,15 @@ body {
     padding: 4px 10px;
     top: 10px;
     right: 12px;
+  }
+  .roll-fab {
+    padding: 14px 24px;
+    font-size: 15px;
+    gap: 7px;
+    white-space: nowrap;
+  }
+  .roll-fab-icon {
+    font-size: 17px;
   }
 }
 

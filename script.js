@@ -15,6 +15,15 @@ const START_ICON = "🏁";
 const DIRECTION_TILE_ICON = "🔮";
 const DIRECTION_TILE_LABEL = "환율 변동 예측";
 
+// Manual line breaks for board-tile labels only (modal/report text keeps the
+// plain category string) so long names don't wrap with 1-3 orphan characters
+// dangling on their own line.
+const TILE_LABEL_BREAKS = {
+  "내국인의 해외여행": "내국인의\n해외여행",
+  "내국인의 해외 유학(노동)": "내국인의 해외\n유학(노동)",
+  "외국인의 국내 유학(노동)": "외국인의 국내\n유학(노동)",
+};
+
 // Short, icon-friendly flavor for the quiz "team status" card — the real
 // category name (used everywhere else: tiles, report, explanations) stays
 // unchanged; this is just a punchier label for the small card.
@@ -570,7 +579,6 @@ function renderBoard() {
   center.className = "tile-center";
   center.innerHTML = `
     <div class="center-globe">🌍</div>
-    <div class="center-label">환율 정복</div>
     <div class="center-card-stack"><div class="stack-card"></div><div class="stack-card"></div><div class="stack-card"></div></div>
   `;
   boardEl.appendChild(center);
@@ -626,7 +634,7 @@ function renderBoard() {
 
       const label = document.createElement("div");
       label.className = "tile-label";
-      label.textContent = tile.category;
+      label.textContent = TILE_LABEL_BREAKS[tile.category] || tile.category;
       el.appendChild(label);
     }
 
@@ -1511,10 +1519,35 @@ function rankScoreFor(unit) {
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
+const podiumEl = document.getElementById("podium");
+
+// Center block tallest (1st), then left (2nd), then right (3rd).
+function renderPodium(ranked) {
+  podiumEl.innerHTML = "";
+  [1, 0, 2].forEach((rankIdx) => {
+    const u = ranked[rankIdx];
+    const block = document.createElement("div");
+    block.className = `podium-block podium-place-${rankIdx + 1}`;
+    if (u) {
+      block.innerHTML = `
+        <div class="podium-medal">${MEDALS[rankIdx]}</div>
+        <div class="podium-avatar">${u.icon}</div>
+        <div class="podium-name">${u.name}</div>
+        <div class="podium-score">자산 ${u.score}</div>
+        <div class="podium-bar"></div>
+      `;
+    } else {
+      block.classList.add("podium-empty");
+    }
+    podiumEl.appendChild(block);
+  });
+}
+
 function renderReport() {
   const unitStats = computeStatsBy((e) => e.unitName);
   const ranked = [...state.units].sort((a, b) => rankScoreFor(b) - rankScoreFor(a));
 
+  renderPodium(ranked);
   reportPlayerListEl.innerHTML = "";
   ranked.forEach((u, idx) => {
     const s = unitStats.get(u.name) || { correct: 0, total: 0 };
