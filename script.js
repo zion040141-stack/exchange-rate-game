@@ -439,7 +439,6 @@ function renderTeamCard(categoryIndex) {
   quizTeamIconsEl.innerHTML = flavor.icons.map((icon) => `<span>${icon}</span>`).join("");
   quizTeamLabelEl.textContent = flavor.label;
   quizTeamQuoteEl.textContent = `"${flavor.quote}"`;
-  return flavor.label;
 }
 const eventQuestionEl = document.getElementById("event-question");
 const eventAnswerRowEl = document.getElementById("event-answer-row");
@@ -640,8 +639,8 @@ function showEvent(tile, unit) {
 
     eventTitleEl.textContent = "🏝️ 무인도 탈출 퀴즈 (고난도)";
     renderDirectionCard(direction);
-    const islandLabel = renderTeamCard(categoryIndex);
-    eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${islandLabel}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
+    renderTeamCard(categoryIndex);
+    eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${CATEGORIES[categoryIndex]}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
 
     if (isReviewMode) {
       eventAnswerRowEl.classList.add("hidden");
@@ -753,8 +752,8 @@ function setupNormalQuiz(unit, tile) {
 
   eventTitleEl.textContent = tile ? `${category} 퀴즈` : "⚡ 더블 찬스 퀴즈";
   renderDirectionCard(direction);
-  const shortLabel = renderTeamCard(categoryIndex);
-  eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${shortLabel}</span>에게 유리할까요?`;
+  renderTeamCard(categoryIndex);
+  eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${CATEGORIES[categoryIndex]}</span>에게 유리할까요?`;
 
   if (isReviewMode) {
     eventAnswerRowEl.classList.add("hidden");
