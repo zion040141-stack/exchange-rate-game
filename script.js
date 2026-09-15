@@ -579,9 +579,11 @@ function renderBoard() {
   center.className = "tile-center";
   center.innerHTML = `
     <div class="center-globe">🌍</div>
+    <div id="center-roll-slot" class="center-roll-slot"></div>
     <div class="center-card-stack"><div class="stack-card"></div><div class="stack-card"></div><div class="stack-card"></div></div>
   `;
   boardEl.appendChild(center);
+  document.getElementById("center-roll-slot").appendChild(rollBtn);
 
   tiles.forEach((tile) => {
     const el = document.createElement("div");
