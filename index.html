@@ -50,6 +50,7 @@
   <!-- 게임 화면 -->
   <div id="game-screen" class="game-screen app-screen hidden">
     <header class="app-header">
+      <button id="music-toggle-btn" class="music-toggle-btn">🔊</button>
       <h1><span class="header-globe">🌍</span> 환율 변동 정복하기</h1>
       <div id="player-bar" class="player-bar"></div>
     </header>
@@ -156,6 +157,7 @@
   <!-- 이벤트 모달 (환율 뉴스 퀴즈) -->
   <div id="event-modal" class="modal hidden">
     <div class="modal-content event-modal-content">
+      <div id="quiz-timer" class="quiz-timer hidden">⏱️ <span id="quiz-timer-value">15</span></div>
       <h2 id="event-title">이벤트</h2>
 
       <div id="quiz-cards-row" class="quiz-cards-row hidden">
@@ -186,6 +188,7 @@
       <div id="nonsense-options" class="option-row hidden"></div>
 
       <div id="event-feedback" class="hidden">
+        <p id="feedback-emoji" class="feedback-emoji"></p>
         <p id="feedback-title" class="feedback-title"></p>
         <p id="feedback-stat" class="feedback-stat"></p>
         <p id="feedback-detail" class="feedback-detail"></p>

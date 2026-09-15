@@ -381,6 +381,7 @@ function startGame() {
   renderBoard();
   updateCurrentUnitDisplay();
   triggerRollInvite();
+  startBackgroundMusic();
 }
 
 function triggerRollInvite() {
@@ -467,14 +468,49 @@ const feedbackStatEl = document.getElementById("feedback-stat");
 const feedbackDetailEl = document.getElementById("feedback-detail");
 const eventCloseBtn = document.getElementById("event-close");
 
+const feedbackEmojiEl = document.getElementById("feedback-emoji");
+
 function showFeedback(title, stat, detail, correct) {
   const colorClass = correct ? "feedback-correct" : "feedback-wrong";
+  feedbackEmojiEl.textContent = correct ? "🎉" : "❌";
   feedbackTitleEl.textContent = title;
   feedbackTitleEl.className = "feedback-title " + colorClass;
   feedbackStatEl.textContent = stat;
   feedbackStatEl.className = "feedback-stat " + colorClass;
   feedbackDetailEl.textContent = detail;
   eventFeedbackEl.classList.remove("hidden");
+}
+
+// ---------------- Quiz countdown timer (15s per question) ----------------
+
+const quizTimerEl = document.getElementById("quiz-timer");
+const quizTimerValueEl = document.getElementById("quiz-timer-value");
+const QUIZ_TIME_LIMIT = 15;
+let quizTimerInterval = null;
+
+function clearQuizTimer() {
+  if (quizTimerInterval) {
+    clearInterval(quizTimerInterval);
+    quizTimerInterval = null;
+  }
+  quizTimerEl.classList.add("hidden");
+  quizTimerEl.classList.remove("quiz-timer-urgent");
+}
+
+function startQuizTimer(onExpire) {
+  clearQuizTimer();
+  let remaining = QUIZ_TIME_LIMIT;
+  quizTimerValueEl.textContent = remaining;
+  quizTimerEl.classList.remove("hidden");
+  quizTimerInterval = setInterval(() => {
+    remaining -= 1;
+    quizTimerValueEl.textContent = remaining;
+    if (remaining <= 5) quizTimerEl.classList.add("quiz-timer-urgent");
+    if (remaining <= 0) {
+      clearQuizTimer();
+      onExpire();
+    }
+  }, 1000);
 }
 
 const diceOverlayEl = document.getElementById("dice-overlay");
@@ -619,6 +655,7 @@ function correctImpactFor(categoryIndex, direction) {
 }
 
 function showEvent(tile, unit) {
+  clearQuizTimer();
   nonsenseOptionsEl.classList.add("hidden");
   eventNewsEl.classList.add("hidden");
   quizCardsRowEl.classList.add("hidden");
@@ -689,6 +726,7 @@ function showEvent(tile, unit) {
         nonsenseOptionsEl.appendChild(btn);
       });
       nonsenseOptionsEl.classList.remove("hidden");
+      startQuizTimer(() => resolveNonsense(false));
     }
   } else if (tile.isSpecial && tile.specialType === "card") {
     cardIsPreview = false;
@@ -742,6 +780,8 @@ function setupNormalQuiz(unit, tile) {
       eventAnswerRowEl.classList.add("hidden");
       const answerLabel = factor.direction === "up" ? "📈 환율 상승" : "📉 환율 하락";
       showFeedback("정답 공개", answerLabel, factor.explanation, true);
+    } else {
+      startQuizTimer(() => handleAnswer(null));
     }
     return;
   }
@@ -767,6 +807,8 @@ function setupNormalQuiz(unit, tile) {
     eventAnswerRowEl.classList.add("hidden");
     const answerLabel = correctImpact === "advantage" ? "👍 유리해요!" : "👎 불리해요!";
     showFeedback("정답 공개", answerLabel, QUIZ_EXPLANATIONS[categoryIndex][direction], true);
+  } else {
+    startQuizTimer(() => handleAnswer(null));
   }
 }
 
@@ -785,6 +827,7 @@ function setupIslandStepOne() {
   eventQuestionEl.textContent = "1단계: 이 상황에서 환율은 상승할까요, 하락할까요?";
   eventAnswerRowEl.classList.remove("hidden");
   eventFeedbackEl.classList.add("hidden");
+  startQuizTimer(() => handleAnswer(null));
 }
 
 function setupIslandStepTwo() {
@@ -801,63 +844,72 @@ function setupIslandStepTwo() {
   eventQuestionEl.innerHTML = `2단계: 그 결과 <span class="quiz-highlight">${CATEGORIES[pendingQuiz.categoryIndex]}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
   eventAnswerRowEl.classList.remove("hidden");
   eventFeedbackEl.classList.add("hidden");
+  startQuizTimer(() => handleAnswer(null));
 }
 
-answerBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    if (!pendingQuiz) return;
-    const chosen = btn.dataset.impact;
+// Shared by real button clicks (chosen = the clicked answer) and the 15s
+// timeout (chosen = null, which never matches a correct answer).
+function handleAnswer(chosen) {
+  if (!pendingQuiz) return;
+  clearQuizTimer();
 
-    if (pendingQuiz.isIsland) {
-      eventAnswerRowEl.classList.add("hidden");
+  if (pendingQuiz.isIsland) {
+    eventAnswerRowEl.classList.add("hidden");
 
-      if (pendingQuiz.islandStep === 1) {
-        const correct = chosen === pendingQuiz.factor.direction;
-        if (correct) {
-          setupIslandStepTwo();
-          return;
-        }
-        if (!isReviewMode) {
-          state.quizLog.push({ unitName: pendingQuiz.unit.name, category: pendingQuiz.category, correct: false });
-          pendingQuiz.unit.score -= 1;
-          pendingQuiz.unit.skipNextTurn = true;
-          renderUnitBar();
-        }
-        showFeedback("땡!", "자산 -1", `${pendingQuiz.factor.explanation} (다음 턴은 쉬어야 해요)`, false);
+    if (pendingQuiz.islandStep === 1) {
+      const correct = chosen === pendingQuiz.factor.direction;
+      if (correct) {
+        if (!isReviewMode) playResultSound(true);
+        setupIslandStepTwo();
         return;
       }
-
-      // Step 2: only reachable after guessing the direction correctly.
-      const correct = chosen === pendingQuiz.correctImpact;
       if (!isReviewMode) {
-        state.quizLog.push({ unitName: pendingQuiz.unit.name, category: pendingQuiz.category, correct });
-        pendingQuiz.unit.score += correct ? 2 : 0;
+        state.quizLog.push({ unitName: pendingQuiz.unit.name, category: pendingQuiz.category, correct: false });
+        pendingQuiz.unit.score -= 1;
+        pendingQuiz.unit.skipNextTurn = true;
         renderUnitBar();
+        playResultSound(false);
       }
-      const detail = QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.factor.direction];
-      showFeedback(
-        correct ? "탈출 성공!" : "절반의 성공...",
-        correct ? "자산 +2" : "자산 +0",
-        detail,
-        correct
-      );
+      showFeedback("땡!", "자산 -1", `${pendingQuiz.factor.explanation} (다음 턴은 쉬어야 해요)`, false);
       return;
     }
 
+    // Step 2: only reachable after guessing the direction correctly.
     const correct = chosen === pendingQuiz.correctImpact;
-    const explanation = pendingQuiz.isDirectionQuiz
-      ? pendingQuiz.explanationText
-      : QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
-    const category = pendingQuiz.category;
-
     if (!isReviewMode) {
-      state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
-      pendingQuiz.unit.score += correct ? 1 : -1;
+      state.quizLog.push({ unitName: pendingQuiz.unit.name, category: pendingQuiz.category, correct });
+      pendingQuiz.unit.score += correct ? 2 : 0;
       renderUnitBar();
+      playResultSound(correct);
     }
-    showFeedback(correct ? "정답!" : "땡!", correct ? "자산 +1" : "자산 -1", explanation, correct);
-    eventAnswerRowEl.classList.add("hidden");
-  });
+    const detail = QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.factor.direction];
+    showFeedback(
+      correct ? "탈출 성공!" : "절반의 성공...",
+      correct ? "자산 +2" : "자산 +0",
+      detail,
+      correct
+    );
+    return;
+  }
+
+  const correct = chosen === pendingQuiz.correctImpact;
+  const explanation = pendingQuiz.isDirectionQuiz
+    ? pendingQuiz.explanationText
+    : QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
+  const category = pendingQuiz.category;
+
+  if (!isReviewMode) {
+    state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
+    pendingQuiz.unit.score += correct ? 1 : -1;
+    renderUnitBar();
+    playResultSound(correct);
+  }
+  showFeedback(correct ? "정답!" : "땡!", correct ? "자산 +1" : "자산 -1", explanation, correct);
+  eventAnswerRowEl.classList.add("hidden");
+}
+
+answerBtns.forEach((btn) => {
+  btn.addEventListener("click", () => handleAnswer(btn.dataset.impact));
 });
 
 function advanceTurnOrEndGame() {
@@ -874,17 +926,20 @@ function advanceTurnOrEndGame() {
 }
 
 eventCloseBtn.addEventListener("click", () => {
+  clearQuizTimer();
   eventModalEl.classList.add("hidden");
   if (isReviewMode) return;
   advanceTurnOrEndGame();
 });
 
 function resolveNonsense(correct) {
+  clearQuizTimer();
   const unit = pendingNonsense.unit;
   if (!isReviewMode) {
     moveUnitBy(unit, correct ? 1 : -1);
     renderBoard();
     lapCountEl.textContent = `${unit.laps} / ${FINISH_LAPS}`;
+    playResultSound(correct);
   }
 
   nonsenseOptionsEl.classList.add("hidden");
@@ -896,26 +951,148 @@ function resolveNonsense(correct) {
   );
 }
 
-// Synthesized "tick" sound for token moves — no audio file needed.
+// All sound effects and background music are synthesized with the Web
+// Audio API — no audio files needed.
 let audioCtx = null;
+
+function ensureAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
 
 function playMoveSound() {
   try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+    const ctx = ensureAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.value = 720;
-    gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.11);
+    gain.gain.setValueAtTime(0.16, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.11);
     osc.connect(gain);
-    gain.connect(audioCtx.destination);
+    gain.connect(ctx.destination);
     osc.start();
-    osc.stop(audioCtx.currentTime + 0.11);
+    osc.stop(ctx.currentTime + 0.11);
   } catch (e) {
     // Ignore audio errors (e.g. autoplay restrictions before any user gesture).
   }
 }
+
+function playResultSound(correct) {
+  try {
+    const ctx = ensureAudioCtx();
+    if (correct) {
+      [880, 1174.66].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + i * 0.11;
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.exponentialRampToValueAtTime(0.22, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.24);
+      });
+    } else {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.35);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    }
+  } catch (e) {
+    // Ignore audio errors.
+  }
+}
+
+function playDiceRollSound() {
+  try {
+    const ctx = ensureAudioCtx();
+    const duration = 0.9;
+    const steps = 12;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    gain.gain.setValueAtTime(0.07, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    let t = ctx.currentTime;
+    for (let i = 0; i < steps; i++) {
+      osc.frequency.setValueAtTime(150 + Math.random() * 500, t);
+      t += duration / steps;
+    }
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch (e) {
+    // Ignore audio errors.
+  }
+}
+
+// ---------------- Background music ----------------
+// A short original chiptune-style loop (not Mario's copyrighted score) —
+// procedurally generated with square-wave oscillators, mutable at any time.
+
+const MUSIC_NOTES = [523.25, 523.25, 659.25, 783.99, 659.25, 783.99, 987.77, 783.99];
+const MUSIC_NOTE_SECONDS = 0.32;
+
+let musicEnabled = true;
+let musicGainNode = null;
+let musicLoopTimeoutId = null;
+let musicStarted = false;
+const musicToggleBtn = document.getElementById("music-toggle-btn");
+
+function scheduleNextMusicNote(noteIndex) {
+  try {
+    const ctx = ensureAudioCtx();
+    const osc = ctx.createOscillator();
+    const noteGain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.value = MUSIC_NOTES[noteIndex % MUSIC_NOTES.length];
+    noteGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    noteGain.gain.exponentialRampToValueAtTime(1, ctx.currentTime + 0.02);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + MUSIC_NOTE_SECONDS * 0.9);
+    osc.connect(noteGain);
+    noteGain.connect(musicGainNode);
+    osc.start();
+    osc.stop(ctx.currentTime + MUSIC_NOTE_SECONDS);
+  } catch (e) {
+    // Ignore audio errors.
+  }
+  musicLoopTimeoutId = setTimeout(() => scheduleNextMusicNote(noteIndex + 1), MUSIC_NOTE_SECONDS * 1000);
+}
+
+function startBackgroundMusic() {
+  if (musicStarted) return;
+  try {
+    const ctx = ensureAudioCtx();
+    musicGainNode = ctx.createGain();
+    musicGainNode.gain.value = musicEnabled ? 0.05 : 0;
+    musicGainNode.connect(ctx.destination);
+    musicStarted = true;
+    scheduleNextMusicNote(0);
+  } catch (e) {
+    // Ignore audio errors.
+  }
+}
+
+function setMusicEnabled(enabled) {
+  musicEnabled = enabled;
+  musicToggleBtn.textContent = musicEnabled ? "🔊" : "🔇";
+  if (musicGainNode) musicGainNode.gain.value = musicEnabled ? 0.05 : 0;
+  if (musicEnabled) startBackgroundMusic();
+}
+
+musicToggleBtn.addEventListener("click", () => setMusicEnabled(!musicEnabled));
 
 function moveUnitBy(unit, delta) {
   playMoveSound();
@@ -1021,6 +1198,7 @@ async function performRoll() {
     result = Math.floor(Math.random() * 6) + 1;
     diceResultEl.textContent = "";
     diceOverlayEl.classList.remove("hidden");
+    playDiceRollSound();
     await animateDiceRoll(result);
     diceResultEl.textContent = result;
     await wait(500);
