@@ -440,6 +440,18 @@ function renderTeamCard(categoryIndex) {
   quizTeamLabelEl.textContent = flavor.label;
   quizTeamQuoteEl.textContent = `"${flavor.quote}"`;
 }
+
+// Shows the raw scenario text without revealing the direction — used
+// wherever the player still has to guess up/down for themselves.
+function renderFactorCard(factor) {
+  quizCardsRowEl.classList.remove("hidden");
+  quizExampleEl.classList.add("hidden");
+  quizCaptionEl.classList.add("hidden");
+  quizTeamCardEl.classList.add("hidden");
+  quizHeadlineEl.textContent = factor.text;
+  quizHeadlineEl.className = "quiz-headline";
+  quizSubtitleEl.textContent = "";
+}
 const eventQuestionEl = document.getElementById("event-question");
 const eventAnswerRowEl = document.getElementById("event-answer-row");
 const answerBtns = document.querySelectorAll(".answer-btn");
@@ -626,30 +638,32 @@ function showEvent(tile, unit) {
     feedbackDetailEl.textContent = "";
     eventFeedbackEl.classList.remove("hidden");
   } else if (tile.isSpecial && tile.specialType === "island") {
-    const direction = Math.random() < 0.5 ? "up" : "down";
+    const factor = DIRECTION_FACTORS[Math.floor(Math.random() * DIRECTION_FACTORS.length)];
     const categoryIndex = Math.floor(Math.random() * CATEGORIES.length);
-    const correctImpact = correctImpactFor(categoryIndex, direction);
+    const correctImpact = correctImpactFor(categoryIndex, factor.direction);
 
-    pendingQuiz = { unit, direction, correctImpact, categoryIndex, category: CATEGORIES[categoryIndex], isIsland: true, isDirectionQuiz: false };
-
-    answerBtnA.textContent = "👍 유리해요!";
-    answerBtnA.dataset.impact = "advantage";
-    answerBtnB.textContent = "👎 불리해요!";
-    answerBtnB.dataset.impact = "disadvantage";
+    pendingQuiz = {
+      unit,
+      isIsland: true,
+      islandStep: 1,
+      factor,
+      categoryIndex,
+      correctImpact,
+      category: "무인도",
+    };
 
     eventTitleEl.textContent = "🏝️ 무인도 탈출 퀴즈 (고난도)";
-    renderDirectionCard(direction);
-    renderTeamCard(categoryIndex);
-    eventQuestionEl.innerHTML = `이 상황이 <span class="quiz-highlight">${CATEGORIES[categoryIndex]}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
 
     if (isReviewMode) {
+      renderFactorCard(factor);
+      renderTeamCard(categoryIndex);
       eventAnswerRowEl.classList.add("hidden");
-      const answerLabel = correctImpact === "advantage" ? "👍 유리해요!" : "👎 불리해요!";
-      showFeedback("정답 공개", answerLabel, QUIZ_EXPLANATIONS[categoryIndex][direction], true);
+      const directionLabel = factor.direction === "up" ? "📈 환율 상승" : "📉 환율 하락";
+      const impactLabel = correctImpact === "advantage" ? "👍 유리해요!" : "👎 불리해요!";
+      eventQuestionEl.innerHTML = `1단계: 이 상황에서 환율은 상승할까요, 하락할까요?<br>2단계: 그 결과 <span class="quiz-highlight">${CATEGORIES[categoryIndex]}</span>에게 유리할까요, 불리할까요?`;
+      showFeedback("정답 공개", `${directionLabel} → ${impactLabel}`, `${factor.explanation} ${QUIZ_EXPLANATIONS[categoryIndex][factor.direction]}`, true);
     } else {
-      answerNeutralBtn.classList.remove("hidden");
-      eventAnswerRowEl.classList.remove("hidden");
-      eventFeedbackEl.classList.add("hidden");
+      setupIslandStepOne();
     }
   } else if (tile.isSpecial && tile.specialType === "nonsense") {
     pendingQuiz = null;
@@ -721,13 +735,7 @@ function setupNormalQuiz(unit, tile) {
     answerBtnB.dataset.impact = "down";
 
     eventTitleEl.textContent = tile ? `${tile.category} 퀴즈` : "⚡ 더블 찬스 퀴즈";
-    quizCardsRowEl.classList.remove("hidden");
-    quizExampleEl.classList.add("hidden");
-    quizCaptionEl.classList.add("hidden");
-    quizTeamCardEl.classList.add("hidden");
-    quizHeadlineEl.textContent = factor.text;
-    quizHeadlineEl.className = "quiz-headline";
-    quizSubtitleEl.textContent = "";
+    renderFactorCard(factor);
     eventQuestionEl.textContent = "이 상황에서 환율은 상승할까요, 하락할까요?";
 
     if (isReviewMode) {
@@ -762,36 +770,93 @@ function setupNormalQuiz(unit, tile) {
   }
 }
 
+// 무인도 탈출 퀴즈는 2단계: 먼저 환율 방향을 맞히고, 맞혀야만 그 결과가
+// 특정 경제주체에게 유리한지 불리한지를 묻는 2단계 질문으로 넘어간다.
+function setupIslandStepOne() {
+  pendingQuiz.islandStep = 1;
+  renderFactorCard(pendingQuiz.factor);
+
+  answerNeutralBtn.classList.add("hidden");
+  answerBtnA.textContent = "📈 환율 상승";
+  answerBtnA.dataset.impact = "up";
+  answerBtnB.textContent = "📉 환율 하락";
+  answerBtnB.dataset.impact = "down";
+
+  eventQuestionEl.textContent = "1단계: 이 상황에서 환율은 상승할까요, 하락할까요?";
+  eventAnswerRowEl.classList.remove("hidden");
+  eventFeedbackEl.classList.add("hidden");
+}
+
+function setupIslandStepTwo() {
+  pendingQuiz.islandStep = 2;
+  renderDirectionCard(pendingQuiz.factor.direction);
+  renderTeamCard(pendingQuiz.categoryIndex);
+
+  answerBtnA.textContent = "👍 유리해요!";
+  answerBtnA.dataset.impact = "advantage";
+  answerBtnB.textContent = "👎 불리해요!";
+  answerBtnB.dataset.impact = "disadvantage";
+  answerNeutralBtn.classList.remove("hidden");
+
+  eventQuestionEl.innerHTML = `2단계: 그 결과 <span class="quiz-highlight">${CATEGORIES[pendingQuiz.categoryIndex]}</span>에게 유리할까요, 불리할까요, 아니면 상관없을까요?`;
+  eventAnswerRowEl.classList.remove("hidden");
+  eventFeedbackEl.classList.add("hidden");
+}
+
 answerBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
     if (!pendingQuiz) return;
     const chosen = btn.dataset.impact;
+
+    if (pendingQuiz.isIsland) {
+      eventAnswerRowEl.classList.add("hidden");
+
+      if (pendingQuiz.islandStep === 1) {
+        const correct = chosen === pendingQuiz.factor.direction;
+        if (correct) {
+          setupIslandStepTwo();
+          return;
+        }
+        if (!isReviewMode) {
+          state.quizLog.push({ unitName: pendingQuiz.unit.name, category: pendingQuiz.category, correct: false });
+          pendingQuiz.unit.score -= 1;
+          pendingQuiz.unit.skipNextTurn = true;
+          renderUnitBar();
+        }
+        showFeedback("땡!", "자산 -1", `${pendingQuiz.factor.explanation} (다음 턴은 쉬어야 해요)`, false);
+        return;
+      }
+
+      // Step 2: only reachable after guessing the direction correctly.
+      const correct = chosen === pendingQuiz.correctImpact;
+      if (!isReviewMode) {
+        state.quizLog.push({ unitName: pendingQuiz.unit.name, category: pendingQuiz.category, correct });
+        pendingQuiz.unit.score += correct ? 2 : 0;
+        renderUnitBar();
+      }
+      const detail = QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.factor.direction];
+      showFeedback(
+        correct ? "탈출 성공!" : "절반의 성공...",
+        correct ? "자산 +2" : "자산 +0",
+        detail,
+        correct
+      );
+      return;
+    }
+
     const correct = chosen === pendingQuiz.correctImpact;
     const explanation = pendingQuiz.isDirectionQuiz
       ? pendingQuiz.explanationText
       : QUIZ_EXPLANATIONS[pendingQuiz.categoryIndex][pendingQuiz.direction];
     const category = pendingQuiz.category;
 
-    if (!isReviewMode) state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
-
-    if (pendingQuiz.isIsland) {
-      if (!isReviewMode) {
-        pendingQuiz.unit.score += correct ? 2 : -1;
-        if (!correct) pendingQuiz.unit.skipNextTurn = true;
-      }
-      showFeedback(
-        correct ? "정답!" : "땡!",
-        correct ? "자산 +2" : "자산 -1",
-        correct ? explanation : `${explanation} (다음 턴은 쉬어야 해요)`,
-        correct
-      );
-    } else {
-      if (!isReviewMode) pendingQuiz.unit.score += correct ? 1 : -1;
-      showFeedback(correct ? "정답!" : "땡!", correct ? "자산 +1" : "자산 -1", explanation, correct);
+    if (!isReviewMode) {
+      state.quizLog.push({ unitName: pendingQuiz.unit.name, category, correct });
+      pendingQuiz.unit.score += correct ? 1 : -1;
+      renderUnitBar();
     }
-
+    showFeedback(correct ? "정답!" : "땡!", correct ? "자산 +1" : "자산 -1", explanation, correct);
     eventAnswerRowEl.classList.add("hidden");
-    if (!isReviewMode) renderUnitBar();
   });
 });
 
